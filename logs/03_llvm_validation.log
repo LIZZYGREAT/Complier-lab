@@ -1,0 +1,15 @@
+Stage 4: compile and validate the hand-written LLVM IR
++ clang -O0 llvm/manual.ll source/host_runtime.c -o generated/manual_llvm
+
+[Executable]
+generated/manual_llvm: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=b8d55425727c08ddc3ebf1cb07b252d0a502a367, for GNU/Linux 3.2.0, not stripped
+
+[Fixed input/output cases]
+n=1 -> 1 PASS
+n=2 -> 5 PASS
+n=3 -> 8 PASS
+n=4 -> 16 PASS
+n=5 -> 21 PASS
+n=10 -> 85 PASS
+
+Stage 4 hand-written LLVM IR: PASS
