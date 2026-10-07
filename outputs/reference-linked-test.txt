@@ -1,0 +1,6 @@
+n=1 -> 1 PASS
+n=2 -> 5 PASS
+n=3 -> 8 PASS
+n=4 -> 16 PASS
+n=5 -> 21 PASS
+n=10 -> 85 PASS
