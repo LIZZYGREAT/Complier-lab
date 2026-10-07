@@ -1,0 +1,17 @@
+Stage 8: check local MLIR/AscendNPU exploration tools
+NOT AVAILABLE bishengir-opt
+NOT AVAILABLE bishengir-compile
+NOT AVAILABLE mlir-opt
+NOT AVAILABLE mlir-translate
+NOT AVAILABLE npu-smi
+
+[Ascend environment]
+ASCEND_HOME_PATH is unset.
+NOT FOUND /usr/local/Ascend/ascend-toolkit
+NOT FOUND /usr/local/ascend-toolkit
+
+[Local course slides/documents]
+No local PDF/PPT course materials found under the workspace.
+
+No Ascend/CANN installation or NPU execution is attempted in this stage.
+Stage 8 local tool inventory: PASS
