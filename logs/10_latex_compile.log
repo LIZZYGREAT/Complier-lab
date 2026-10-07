@@ -919,8 +919,10 @@ t;"
 
  [1
 
-] [2] [3] [4] [5] [6] (report.aux)
+] [2] [3] [4] [5] [6] [7
+
+] (report.aux)
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 25046B2CA54807CE9340622D33844603;1415.
+(rerunfilecheck)             Checksum: AC3CD473BD1315C0FE70D8087BE37319;1579.
  )
-Output written on report.xdv (6 pages, 126624 bytes).
+Output written on report.xdv (7 pages, 154736 bytes).
