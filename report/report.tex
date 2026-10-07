@@ -1,0 +1,306 @@
+% !TeX program = tectonic
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+
+\usepackage[left=2.45cm,right=2.45cm,top=2.35cm,bottom=2.35cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array,booktabs,tabularx}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usetikzlibrary{arrows.meta,positioning}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  citecolor=blue!45!black,
+  urlcolor=blue!55!black,
+  pdftitle={基于 Clang/LLVM 的语言处理流程与 SysY 手写实现},
+  pdfauthor={LIZZYGREAT},
+  pdfsubject={编译原理实验报告}
+}
+\urlstyle{same}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.25em}
+\renewcommand{\arraystretch}{1.22}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\captionsetup{font=small,labelfont=bf,skip=5pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small 编译原理第一次作业实验报告}
+\fancyhead[R]{\small Clang/LLVM 与 SysY}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{black!3},
+  frame=single,
+  rulecolor=\color{black!15},
+  framerule=0.4pt,
+  xleftmargin=1em,
+  xrightmargin=1em,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  aboveskip=0.6em,
+  belowskip=0.7em
+}
+
+\title{\heiti 基于 Clang/LLVM 的语言处理流程与 SysY 手写实现}
+\author{作者：LIZZYGREAT}
+\date{2026 年 10 月 7 日}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文以一个含函数、while、if/else、取模和整数输入输出的 SysY 风格程序为贯穿案例，使用 Clang 14 观察预处理、LLVM IR 生成、x86-64 汇编、ELF 目标文件和显式链接过程。随后根据源程序语义独立手写 LLVM IR 与 RV64 汇编，并分别链接运行库验证。六组输入在宿主机 reference、手写 LLVM 和 QEMU/RISC-V 上均得到 1、5、8、16、21、85。优化对比显示，Clang -O2 消除了该模块中的 alloca/load/store，并在 x86-64 上生成四 lane 向量运算；RV64 目标保留标量循环并内联 calc。最后依据 LLVM 与 AscendNPU-IR 官方材料分析 VecAdd 的多层 MLIR lowering，明确该部分属于资料分析，没有在本机运行 CANN 编译器或 Ascend 设备。
+
+\noindent\textbf{关键词：} 编译器；Clang；LLVM IR；RISC-V；ABI；MLIR；lowering
+\end{abstract}
+
+\section{引言}
+
+编译器把源程序逐步转换为可执行程序。理解每一步的输入、输出和符号关系，有助于分清预处理、编译、汇编和链接的职责。LLVM IR 适合观察语言结构如何变为控制流和算术指令；RISC-V 汇编则展示调用约定、寄存器和栈帧如何落实到目标架构。
+
+本实验固定一个程序，避免不同算法导致比较基准变化。程序令 $i$ 从 1 递增到输入 $n$，若 $i$ 为偶数则将 $2i$ 加入 sum，否则将 $i$ 加入 sum，最后输出 sum。程序覆盖局部整型变量、赋值、加法、乘法、取模、比较、条件分支、循环、函数参数、函数返回和运行库调用。所有实现都使用同一输入集合验证。
+
+\section{实验对象与工具环境}
+
+程序语义可写为：
+
+\begin{lstlisting}
+sum = 0
+for i = 1..n:
+    if i % 2 == 0: sum += 2 * i
+    else:          sum += i
+return sum
+\end{lstlisting}
+
+工作环境为 Ubuntu 22.04.5 on WSL2，Clang 14.0.0、GCC 11.4、QEMU 7.0.0、RISC-V unknown-elf GCC 15.1、Flex 2.6.4、Bison 3.8.2。课程目录已有编译器和 SysY runtime，本实验复用其 \code{libsysy_riscv.a}；没有重新安装或改动该目录。Clang 的 RISC-V 参考目标和手写目标统一使用 \code{rv64gc/lp64d}。
+
+\section{Clang 语言处理流程}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    stage/.style={draw=blue!45!black,fill=blue!4,rounded corners=2pt,
+      align=center,text width=1.82cm,minimum height=1.05cm,font=\small},
+    flow/.style={-{Stealth[length=2mm]},thick,draw=blue!55!black},
+    node distance=0.48cm
+  ]
+    \node[stage] (src) {SysY/C\\源文件};
+    \node[stage,right=of src] (pre) {预处理\\\code{.i}};
+    \node[stage,right=of pre] (ir) {LLVM IR\\\code{.ll}};
+    \node[stage,right=of ir] (asm) {汇编/目标\\\code{.s/.o}};
+    \node[stage,right=of asm] (elf) {显式链接\\ELF};
+    \node[stage,right=of elf] (run) {执行\\host\\QEMU};
+    \draw[flow] (src) -- (pre);
+    \draw[flow] (pre) -- (ir);
+    \draw[flow] (ir) -- (asm);
+    \draw[flow] (asm) -- (elf);
+    \draw[flow] (elf) -- (run);
+  \end{tikzpicture}
+  \caption{从源程序到运行文件的实验流程}
+\end{figure}
+
+\subsection{预处理}
+
+命令 \code{clang -E source/example_clang.c -o generated/example.i} 生成预处理文件。本例没有宏、条件编译或头文件，因此 \code{.i} 主要保留原 C 语句和源文件行标记。预处理器解释预处理指令并输出供后续前端处理的源文本；本例中的 if、while 语义由后续编译阶段处理。
+
+\subsection{编译与 LLVM IR}
+
+命令如下：
+\begin{lstlisting}
+clang -S -emit-llvm -O0 source/example_clang.c -o generated/example.ll
+\end{lstlisting}
+命令对 \code{source/example_clang.c} 编译并生成 \code{generated/example.ll}。Clang 前端完成词法、语法和语义处理，再生成 IR；LLVM 中端可在 IR 上优化，后端按目标架构选择指令。本次 -O0 IR 中，局部变量由 alloca/load/store 表示，比较使用 icmp，while 和 if/else 通过 br 与基本块表达，函数调用和返回体现为 call/ret。
+
+\subsection{汇编与目标文件}
+
+\code{clang -S -O0} 生成宿主机 x86-64 汇编 \code{generated/example_x86.s}。Clang \code{-c} 将 C 文件继续编译、汇编成 ELF64 可重定位目标文件 \code{generated/example.o}；该文件的 ELF 类型为 REL，包含 \code{.text}、符号表和重定位项。符号表显示 calc、main 已定义，getint 和 putint 仍为未定义符号。它们的调用位置需要由链接器结合运行库解析。
+
+\subsection{链接}
+
+本实验分别生成 \code{example.o} 与 \code{host_runtime.o}，再用 Clang 驱动显式链接。日志显示 Clang 调用 \code{/usr/bin/ld}，并加入 CRT 启动对象和 \code{-lc}。\code{host_runtime.o} 定义 getint/putint，系统 C 库解析 scanf/printf。链接器应用重定位、合并输入节区并生成最终可执行 ELF。单独的 example.o 既没有完整的外部符号定义，也不是可直接执行的进程映像。
+
+\begin{table}[H]
+  \centering\small
+  \caption{语言处理阶段及本实验观察}
+  \begin{tabularx}{\textwidth}{P{2.4cm}P{5.5cm}Y}
+    \toprule
+    阶段 & 命令或产物 & 本实验观察 \\
+    \midrule
+    预处理 & \code{clang -E}；\code{example.i} & 保留 C 语句并带行标记；本例无宏/头文件展开 \\
+    LLVM IR & \code{clang -S -emit-llvm -O0}；\code{example.ll} & alloca、load/store、icmp、br、call、ret \\
+    汇编 & \code{clang -S -O0}；\code{example_x86.s} & x86-64 指令和调用序列 \\
+    汇编器 & \code{clang -c}；\code{example.o} & ELF REL、节区、符号和重定位 \\
+    链接器 & \code{example.o + host_runtime.o} & 解析 runtime/C 库符号并生成可执行 ELF \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{LLVM IR 控制流与手写实现}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    block/.style={draw=blue!45!black,fill=blue!4,rounded corners=2pt,
+      align=center,text width=3.15cm,minimum height=0.92cm,font=\small},
+    edge/.style={-{Stealth[length=2mm]},thick,draw=blue!55!black}
+  ]
+    \node[block] (entry) at (0,0) {entry\\初始化 $i$、sum};
+    \node[block] (cond) at (0,-1.55) {while 条件\\$i \le n$};
+    \node[block] (exit) at (5,-1.55) {while.end\\return sum};
+    \node[block] (ifcond) at (0,-3.25) {if 条件\\$i \bmod 2 = 0$};
+    \node[block] (then) at (-2,-5.0) {if.then\\sum $\mathrel{+}=2i$};
+    \node[block] (else) at (2,-5.0) {if.else\\sum $\mathrel{+}=i$};
+    \node[block] (merge) at (0,-6.8) {if.end\\$i{+}{+}$};
+    \draw[edge] (entry) -- (cond);
+    \draw[edge] (cond.east) -- node[above,font=\footnotesize]{$i>n$} (exit.west);
+    \draw[edge] (cond) -- node[right,font=\footnotesize]{继续} (ifcond);
+    \draw[edge] (ifcond.west) -- node[above left,font=\footnotesize]{偶数} (then.north);
+    \draw[edge] (ifcond.east) -- node[above right,font=\footnotesize]{奇数} (else.north);
+    \draw[edge] (then.south) -- (merge.north west);
+    \draw[edge] (else.south) -- (merge.north east);
+    \draw[edge] (merge.west) -- (-2.55,-6.8) -- (-2.55,-1.55) -- (cond.west);
+  \end{tikzpicture}
+  \caption{\code{calc} 的基本块与循环回边}
+\end{figure}
+
+Clang -O0 生成的 calc 使用数字标签。入口块初始化 i 和 sum 后进入 \texttt{\%5}；\texttt{\%5} 用 \code{icmp sle} 计算 $i \le n$。真分支进入 \texttt{\%9} 判断 $i\bmod 2$，两个分支 \texttt{\%13}、\texttt{\%18} 分别计算偶数项和奇数项，并汇入 \texttt{\%22}。\texttt{\%22} 执行 $i{+}{+}$ 后无条件跳回 \texttt{\%5}，构成 while 回边；假分支到 \texttt{\%25} 读取 sum 并返回。
+
+\begin{table}[H]
+  \centering\small
+  \caption{源程序结构与 LLVM 指令对应}
+  \begin{tabularx}{\textwidth}{P{3.2cm}P{3.1cm}Y}
+    \toprule
+    源程序结构 & LLVM 指令 & 作用 \\
+    \midrule
+    局部变量声明/赋值 & alloca、store & 为 n/i/sum 分配栈槽并写初值或新值 \\
+    读取变量 & load & 取 i、n、sum 的当前值 \\
+    加法、乘法、取模 & add、mul、srem & 计算计数器、累加项与奇偶性 \\
+    比较 & icmp sle、icmp eq & 判断循环范围和余数是否为零 \\
+    if/while & br、基本块 & 根据条件转移，合并分支并形成循环回边 \\
+    函数关系 & define、call、ret & 定义 calc/main，调用 getint/calc/putint 并返回 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+手写 \code{llvm/manual.ll} 根据源程序和 CFG 独立组织 entry、while.cond、if.cond、if.then、if.else、if.end、while.end 七个命名块，使用 alloca/load/store 保存局部变量。Clang 接受该 IR 并将其与 \code{host_runtime.c} 链接；六组输入全部通过。
+
+\section{RISC-V 汇编与 ABI}
+
+RISC-V 参考汇编由 Clang 14 交叉生成。手写 \code{riscv/manual.s} 将 n、i、sum 保存于 calc 栈帧；while 条件用 \code{blt n,i,while_end} 判断退出；\code{remw} 与 \code{beqz} 选择奇偶分支；偶数项用 \code{slliw} 乘 2，累加用 \code{addw}，循环尾递增 i 并跳回条件块。
+
+\begin{table}[H]
+  \centering\small
+  \caption{本实验用到的 RISC-V 寄存器与调用约定}
+  \begin{tabularx}{\textwidth}{P{3.0cm}Y}
+    \toprule
+    寄存器/规则 & 本实验用法 \\
+    \midrule
+    \code{a0} & 第一个整型参数与整型返回值；getint、calc、putint 之间传值 \\
+    \code{t0-t2} & calc 内的 caller-saved 临时值 \\
+    \code{s0} & calc 的 frame pointer；按 ABI 保存并恢复 \\
+    \code{sp} & 栈指针；calc/main 分别保留 32/16 字节且保持 16 字节对齐 \\
+    \code{ra} & 返回地址；main 跨越函数调用保存/恢复 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+手写汇编通过 \code{riscv64-unknown-elf-gcc} 汇编和链接已有 SysY runtime，采用课程配置的 \code{-static -mcmodel=medany -Ttext=0x90000000}，生成 RISC-V ELF executable，再由 QEMU 用户态模拟器运行。课程 runtime 的析构函数会把 TOTAL 计时摘要写入 stderr；程序数值输出仍与 reference 相同。
+
+\section{运行验证}
+
+\begin{table}[H]
+  \centering\small
+  \caption{六组输入在三种实现上的输出比较}
+  \begin{tabular}{P{1.45cm}P{2.4cm}P{2.4cm}P{4.2cm}>{\centering\arraybackslash}p{1.6cm}}
+    \toprule
+    输入 $n$ & Reference & 手写 LLVM & 手写 RISC-V/QEMU & 结果 \\
+    \midrule
+    1 & 1 & 1 & 1 & PASS \\
+    2 & 5 & 5 & 5 & PASS \\
+    3 & 8 & 8 & 8 & PASS \\
+    4 & 16 & 16 & 16 & PASS \\
+    5 & 21 & 21 & 21 & PASS \\
+    10 & 85 & 85 & 85 & PASS \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+最终结果由 \code{outputs/final-validation.md} 和 \code{logs/09_final_validation.log} 留证。比较脚本检查每个实现是否等于独立固定的期望值，不只比较三者之间是否相同。
+
+\section{优化观察：-O0 与 -O2}
+
+\begin{table}[H]
+  \centering\small
+  \caption{LLVM IR 中间表示指令数量}
+  \begin{tabularx}{0.75\textwidth}{Yrr}
+    \toprule
+    LLVM IR 指令数量 & -O0 & -O2 \\
+    \midrule
+    alloca & 6 & 0 \\
+    load & 11 & 0 \\
+    store & 9 & 0 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\code{-O2} 将可变局部量改写为 SSA 值和循环 phi，消除了显式栈槽读写，并把余数/if 奇偶计算改成位运算与移位。x86-64 IR 出现四 lane \code{<4 x i32>} 运算和 vector reduce；汇编中可见 XMM 与 \code{paddd}。calc 仍有外部可见定义，但 main 内的调用已被内联。x86 汇编行数从 87 变为 385，增加来自向量化循环体和内联代码，行数本身不表示速度或代码尺寸。
+
+RV64 目标为 rv64gc，不包含 RVV 扩展。其 -O2 汇编仍为标量循环，没有向量寄存器指令；优化将 calc 内联进 main，并化简奇偶累加。RV64 汇编行数从 91 变为 56。本实验没有测量执行时间，因此不据此推断性能提升。
+
+\section{MLIR / AscendNPU VecAdd}
+
+MLIR 以 operation/value/block/region 和 dialect 描述不同抽象层。VecAdd 的高层语义是 $C[j]=A[j]+B[j]$，元素类型和 tensor shape 可保留在 Arith/Tensor 或 Linalg 表示中。HFusion 对算子图执行融合、tiling 与调度；HIVM 示例则显式表示 GM 输入、UB 暂存、GM 到 UB 的 load、\code{hivm.hir.vadd} 和写回 GM。HACC 属性标记 device kernel 入口，配套 host wrapper 完成 ACL 初始化、数据传输、launch 和同步。\cite{mlir-lang,mlir-rationale,mlir-llvm,ascend-framework,ascend-interface,ascend-vecadd,ascend-readme}
+
+\begin{table}[H]
+  \centering\small
+  \caption{VecAdd lowering 各层关注点}
+  \begin{tabularx}{\textwidth}{P{2.5cm}P{5.2cm}Y}
+    \toprule
+    层 & VecAdd 表达 & 关注点 \\
+    \midrule
+    Arith/Tensor & 张量形状与逐元素 add & 运算语义、元素类型和 shape \\
+    Linalg/HFusion & 张量算子及融合/tiling & 算子组合和执行计划 \\
+    HIVM & GM/UB、load、vadd、store & Ascend 存储层次与硬件操作 \\
+    HACC & entry 与 HOST/DEVICE 属性 & 主机/设备边界和 kernel 启动 \\
+    LLVM IR/后端 & 低层指令与目标代码 & 控制流、地址、调用约定和机器码 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+此阶段是官方文档与源码分析，没有安装 CANN，也没有运行 bishengir-opt、bishengir-compile 或 Ascend NPU。公开 VecAdd 样例展示 HIVM kernel \code{.o} 和 CANN host wrapper；本文没有把未观察到的 LLVM IR dump 写成实测中间产物。LLVM dialect 到 LLVM IR 的渐进转换机制依据 LLVM 官方文档说明。\cite{mlir-llvm}
+
+\section{结论}
+
+通过同一 SysY 程序，实验观察了 Clang 从预处理文本、LLVM IR、宿主机汇编到 ELF 目标文件和链接结果的流程。手写 LLVM IR 和 RV64 汇编均遵循源程序控制流与函数语义，并通过六组输入验证。优化对照显示，优化会改变值表示、循环形态和目标指令选择，且不同后端得到不同的向量化结果。MLIR 的多层 dialect 保留张量/算子信息，并在 lowering 中逐步引入内存与硬件细节；Ascend 示例分析以公开资料为依据，未进行本机 NPU 编译或运行。
+
+\begin{thebibliography}{99}
+\footnotesize
+\setlength{\itemsep}{0pt}
+\setlength{\parsep}{0pt}
+\setlength{\topsep}{0.2em}
+\bibitem{mlir-lang} LLVM Project. \emph{MLIR Language Reference}. \url{https://mlir.llvm.org/docs/LangRef/}（访问日期：2026-10-07）.
+\bibitem{mlir-rationale} LLVM Project. \emph{MLIR Rationale}. \url{https://mlir.llvm.org/docs/Rationale/Rationale/}（访问日期：2026-10-07）.
+\bibitem{mlir-llvm} LLVM Project. \emph{Targeting LLVM IR from MLIR}. \url{https://mlir.llvm.org/docs/TargetLLVMIR/}（访问日期：2026-10-07）.
+\bibitem{ascend-framework} Ascend. \emph{AscendNPU-IR Framework Integration}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/developer_guide/conversion/framework_interface.md}（访问日期：2026-10-07）.
+\bibitem{ascend-interface} Ascend. \emph{AscendNPU-IR Interface API}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/developer_guide/conversion/interface_api.md}（访问日期：2026-10-07）.
+\bibitem{ascend-vecadd} Ascend. \emph{HIVM VecAdd add.mlir}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/add.mlir}（访问日期：2026-10-07）.
+\bibitem{ascend-readme} Ascend. \emph{HIVM VecAdd README and host wrapper}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/README.md}（访问日期：2026-10-07）.
+\bibitem{course-docs} Compiler-Labs. 编译原理作业要求与执行流程（本地课程文档，访问日期：2026-10-07）.
+\end{thebibliography}
+
+\end{document}
