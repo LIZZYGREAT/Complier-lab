@@ -6,13 +6,13 @@
 
 ## 报告内容
 
-`report/report.tex` 包含题目、摘要、关键词、引言、实验对象与环境、预处理/编译/汇编/链接、LLVM IR/CFG 与手写 IR、RV64 ABI/手写汇编、六组运行结果、O0/O2 对照、MLIR/Ascend VecAdd 分析、结论和参考文献。流程图和 CFG 图使用 TikZ 绘制为矢量图。
+`report/report.tex` 包含题目、摘要、关键词、引言、实验对象与环境、预处理/编译/汇编/链接、LLVM IR/CFG 与手写 IR、RV64 ABI/手写汇编、六组运行结果、O0/O2 对照、MLIR/Ascend VecAdd 与 PlanMemory 上游 Test Case 分析、结论和参考文献。流程图和 CFG 图使用 TikZ 绘制为矢量图。
 
-AscendNPU 部分只报告官方文档和源码分析；本机没有 CANN、`bishengir-compile` 或 Ascend 设备，因此没有声称运行了 Ascend 编译或设备测试。
+AscendNPU 部分只报告官方文档和源码分析；本机没有构建/运行 `bishengir-opt`，没有 CANN 或 Ascend 设备，因此没有声称运行 Ascend Pass、编译或设备测试。PlanMemory 用例的 `RUN`/`CHECK` 只作为上游源码证据。
 
 ## 编译过程
 
-报告由 Tectonic 0.16.9（x86-64 musl 静态构建）编译。Tectonic 和 LaTeX 资源缓存都放在 `/tmp`，没有安装系统软件、修改 shell 配置或提交编译器二进制。中文字体使用 Tectonic 资源包中的 Fandol 字体。
+报告由 Tectonic 0.16.9（x86-64 musl 静态构建）编译。Tectonic 和 LaTeX 资源缓存放在 `/tmp`，没有安装系统软件、修改 shell 配置或提交编译器二进制；构建后清理了本轮生成的缓存和页面图片。中文字体使用 Tectonic 资源包中的 Fandol 字体。按用户要求保留 `/tmp/compiler-labs-pdf-check` 页面检查工具。
 
 本次构建命令：
 
@@ -33,6 +33,6 @@ bash scripts/10_build_report.sh 2>&1 | tee logs/10_report_build.log
 
 ## 验收结果
 
-PASS — Tectonic 编译成功，最终 LaTeX 日志无排版溢出、缺字或编译错误。PDF 版本 1.5，共 6 页，SHA-256：`d01e6d52ebccd00e09d18982565ba810f45cedb429f96ba13662b5aa96dd6ef1`。
+PASS — Tectonic 编译成功，最终 LaTeX 日志无排版溢出、缺字或编译错误。PDF 版本 1.5，共 7 页，SHA-256：`f89925fb54c0eb8c42126d3ecc9ed0d9d854cc169b870a429d4b4b70eb7961cb`。
 
-使用隔离在 `/tmp/compiler-labs-pdf-check` 的 pypdfium2 和 Pillow 逐页渲染检查了 PDF：六页内容完整，图表、表格和参考文献未见裁切、重叠或孤行空白页。用户要求保留该检查工具，因此保留渲染工具本身；检查用的临时页面图片已清理。
+使用隔离在 `/tmp/compiler-labs-pdf-check` 的 pypdfium2 和 Pillow 渲染并检查了最终 PDF：七页内容完整，图表、表格和参考文献未见裁切、重叠或孤行空白页。检查用的临时页面图片已清理。
