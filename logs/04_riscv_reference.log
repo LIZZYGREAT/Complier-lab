@@ -1,0 +1,146 @@
+Stage 5: generate RISC-V reference assembly with Clang
++ clang --target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d -S -O0 source/example_clang.c -o generated/example_riscv.s
+
+[Generated assembly file]
+generated/example_riscv.s: assembler source, ASCII text
+	.text
+	.attribute	4, 16
+	.attribute	5, "rv64i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
+	.file	"example_clang.c"
+	.globl	calc
+	.p2align	1
+	.type	calc,@function
+calc:
+	addi	sp, sp, -32
+	sd	ra, 24(sp)
+	sd	s0, 16(sp)
+	addi	s0, sp, 32
+	sw	a0, -20(s0)
+	li	a0, 1
+	sw	a0, -24(s0)
+	li	a0, 0
+	sw	a0, -28(s0)
+	j	.LBB0_1
+.LBB0_1:
+	lw	a1, -24(s0)
+	lw	a0, -20(s0)
+	blt	a0, a1, .LBB0_6
+	j	.LBB0_2
+.LBB0_2:
+	lwu	a0, -24(s0)
+	srli	a1, a0, 31
+	add	a1, a1, a0
+	andi	a1, a1, -2
+	subw	a0, a0, a1
+	li	a1, 0
+	bne	a0, a1, .LBB0_4
+	j	.LBB0_3
+.LBB0_3:
+	lw	a0, -28(s0)
+	lw	a1, -24(s0)
+	slliw	a1, a1, 1
+	addw	a0, a0, a1
+	sw	a0, -28(s0)
+	j	.LBB0_5
+.LBB0_4:
+	lw	a0, -28(s0)
+	lw	a1, -24(s0)
+	addw	a0, a0, a1
+	sw	a0, -28(s0)
+	j	.LBB0_5
+.LBB0_5:
+	lw	a0, -24(s0)
+	addiw	a0, a0, 1
+	sw	a0, -24(s0)
+	j	.LBB0_1
+.LBB0_6:
+	lw	a0, -28(s0)
+	ld	ra, 24(sp)
+	ld	s0, 16(sp)
+	addi	sp, sp, 32
+	ret
+.Lfunc_end0:
+	.size	calc, .Lfunc_end0-calc
+
+	.globl	main
+	.p2align	1
+	.type	main,@function
+main:
+	addi	sp, sp, -48
+	sd	ra, 40(sp)
+	sd	s0, 32(sp)
+	addi	s0, sp, 48
+	li	a0, 0
+	sd	a0, -40(s0)
+	sw	a0, -20(s0)
+	call	getint
+	sw	a0, -24(s0)
+	lw	a0, -24(s0)
+	call	calc
+	sw	a0, -28(s0)
+	lw	a0, -28(s0)
+	call	putint
+	ld	a0, -40(s0)
+	ld	ra, 40(sp)
+	ld	s0, 32(sp)
+	addi	sp, sp, 48
+	ret
+.Lfunc_end1:
+	.size	main, .Lfunc_end1-main
+
+	.ident	"Ubuntu clang version 14.0.0-1ubuntu1.1"
+	.section	".note.GNU-stack","",@progbits
+	.addrsig
+	.addrsig_sym calc
+	.addrsig_sym getint
+	.addrsig_sym putint
+
+[Course runtime/linker configuration]
+# Option 1: riscv64-unknown-elf-gcc riscv64-unknown-elf-ar
+# Option 2: riscv64-linux-gnu-gcc riscv64-linux-gnu-ar
+RISCV_GCC=riscv64-unknown-elf-gcc
+RISCV_AR=riscv64-unknown-elf-ar
+
+TEXT_ADDR=0x90000000
+
+[Assembly/link helper details]
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/toolchain.conf"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Configuration file toolchain.conf not found"
+  exit 1
+fi
+
+RISCV_GCC=$(grep "^RISCV_GCC=" "$CONFIG_FILE" | cut -d'=' -f2)
+TEXT_ADDR=$(grep "^TEXT_ADDR=" "$CONFIG_FILE" | cut -d'=' -f2)
+
+INPUT_FILE="${1:-test.s}"
+OUTPUT_BIN="${2:-test.bin}"
+OBJ_FILE="${INPUT_FILE%.s}.o"
+
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: Input file '$INPUT_FILE' not found"
+    exit 1
+fi
+
+$RISCV_GCC "$INPUT_FILE" -c -o "$OBJ_FILE" -w
+$RISCV_GCC "$OBJ_FILE" -o "$OUTPUT_BIN"\
+    -L./lib -lsysy_riscv\
+    -static -mcmodel=medany\
+    -Wl,--no-relax,-Ttext=$TEXT_ADDR
+
+rm "$OBJ_FILE"
+
+echo "Successfully compiled $INPUT_FILE to $OUTPUT_BIN"
+
+[Existing RISC-V runtime archive members]
+sylib.o
+libsysy_riscv.o
+
+[Available checked-in linker scripts]
+No .ld/.lds files found; asm2bin.sh uses configured -Ttext address.
+
+Stage 5 RISC-V reference generation: PASS
