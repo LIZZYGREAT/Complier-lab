@@ -1,0 +1,27 @@
+Stage 9: final consistency check across reference, LLVM IR, and RISC-V
+Runtime outputs from the RISC-V library go to stderr and remain visible in this log.
+
+TOTAL: 0H-0M-0S-0us
+n=1 expected=1 reference=1 llvm=1 riscv=1 PASS
+TOTAL: 0H-0M-0S-0us
+n=2 expected=5 reference=5 llvm=5 riscv=5 PASS
+TOTAL: 0H-0M-0S-0us
+n=3 expected=8 reference=8 llvm=8 riscv=8 PASS
+TOTAL: 0H-0M-0S-0us
+n=4 expected=16 reference=16 llvm=16 riscv=16 PASS
+TOTAL: 0H-0M-0S-0us
+n=5 expected=21 reference=21 llvm=21 riscv=21 PASS
+TOTAL: 0H-0M-0S-0us
+n=10 expected=85 reference=85 llvm=85 riscv=85 PASS
+
+[Final result table]
+| Input | Reference | LLVM | RISC-V | Result |
+| ---: | ---: | ---: | ---: | :---: |
+| 1 | 1 | 1 | 1 | PASS |
+| 2 | 5 | 5 | 5 | PASS |
+| 3 | 8 | 8 | 8 | PASS |
+| 4 | 16 | 16 | 16 | PASS |
+| 5 | 21 | 21 | 21 | PASS |
+| 10 | 85 | 85 | 85 | PASS |
+
+Stage 9 final consistency: PASS
