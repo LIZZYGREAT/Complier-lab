@@ -1,0 +1,23 @@
+===== SYSTEM =====
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+x86_64
+
+===== BUILD TOOLS =====
+/bin/bash: line 7: cmake: command not found
+1.10.1
+Ubuntu clang version 14.0.0-1ubuntu1.1
+git version 2.34.1
+
+===== OPTIONAL USER TOOLING =====
+pip 22.0.2 from /usr/lib/python3/dist-packages/pip (python 3.10)
