@@ -1,0 +1,239 @@
+; ModuleID = 'source/example_clang.c'
+source_filename = "source/example_clang.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+; Function Attrs: nofree norecurse nosync nounwind readnone uwtable
+define dso_local i32 @calc(i32 noundef %0) local_unnamed_addr #0 {
+  %2 = icmp slt i32 %0, 1
+  br i1 %2, label %77, label %3
+
+3:                                                ; preds = %1
+  %4 = icmp ult i32 %0, 8
+  br i1 %4, label %65, label %5
+
+5:                                                ; preds = %3
+  %6 = and i32 %0, -8
+  %7 = or i32 %6, 1
+  %8 = add i32 %6, -8
+  %9 = lshr exact i32 %8, 3
+  %10 = add nuw nsw i32 %9, 1
+  %11 = and i32 %10, 1
+  %12 = icmp eq i32 %8, 0
+  br i1 %12, label %42, label %13
+
+13:                                               ; preds = %5
+  %14 = and i32 %10, 1073741822
+  br label %15
+
+15:                                               ; preds = %15, %13
+  %16 = phi <4 x i32> [ zeroinitializer, %13 ], [ %37, %15 ]
+  %17 = phi <4 x i32> [ zeroinitializer, %13 ], [ %38, %15 ]
+  %18 = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, %13 ], [ %39, %15 ]
+  %19 = phi i32 [ 0, %13 ], [ %40, %15 ]
+  %20 = add <4 x i32> %18, <i32 4, i32 4, i32 4, i32 4>
+  %21 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %22 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %23 = xor <4 x i32> %21, <i32 1, i32 1, i32 1, i32 1>
+  %24 = xor <4 x i32> %22, <i32 1, i32 1, i32 1, i32 1>
+  %25 = shl nuw nsw <4 x i32> %18, %23
+  %26 = shl nuw nsw <4 x i32> %20, %24
+  %27 = add <4 x i32> %25, %16
+  %28 = add <4 x i32> %26, %17
+  %29 = add <4 x i32> %18, <i32 8, i32 8, i32 8, i32 8>
+  %30 = add <4 x i32> %18, <i32 12, i32 12, i32 12, i32 12>
+  %31 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %32 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %33 = xor <4 x i32> %31, <i32 1, i32 1, i32 1, i32 1>
+  %34 = xor <4 x i32> %32, <i32 1, i32 1, i32 1, i32 1>
+  %35 = shl nuw nsw <4 x i32> %29, %33
+  %36 = shl nuw nsw <4 x i32> %30, %34
+  %37 = add <4 x i32> %35, %27
+  %38 = add <4 x i32> %36, %28
+  %39 = add <4 x i32> %18, <i32 16, i32 16, i32 16, i32 16>
+  %40 = add i32 %19, 2
+  %41 = icmp eq i32 %40, %14
+  br i1 %41, label %42, label %15, !llvm.loop !5
+
+42:                                               ; preds = %15, %5
+  %43 = phi <4 x i32> [ undef, %5 ], [ %37, %15 ]
+  %44 = phi <4 x i32> [ undef, %5 ], [ %38, %15 ]
+  %45 = phi <4 x i32> [ zeroinitializer, %5 ], [ %37, %15 ]
+  %46 = phi <4 x i32> [ zeroinitializer, %5 ], [ %38, %15 ]
+  %47 = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, %5 ], [ %39, %15 ]
+  %48 = icmp eq i32 %11, 0
+  br i1 %48, label %59, label %49
+
+49:                                               ; preds = %42
+  %50 = add <4 x i32> %47, <i32 4, i32 4, i32 4, i32 4>
+  %51 = and <4 x i32> %47, <i32 1, i32 1, i32 1, i32 1>
+  %52 = and <4 x i32> %47, <i32 1, i32 1, i32 1, i32 1>
+  %53 = xor <4 x i32> %51, <i32 1, i32 1, i32 1, i32 1>
+  %54 = xor <4 x i32> %52, <i32 1, i32 1, i32 1, i32 1>
+  %55 = shl nuw nsw <4 x i32> %47, %53
+  %56 = shl nuw nsw <4 x i32> %50, %54
+  %57 = add <4 x i32> %55, %45
+  %58 = add <4 x i32> %56, %46
+  br label %59
+
+59:                                               ; preds = %42, %49
+  %60 = phi <4 x i32> [ %43, %42 ], [ %57, %49 ]
+  %61 = phi <4 x i32> [ %44, %42 ], [ %58, %49 ]
+  %62 = add <4 x i32> %61, %60
+  %63 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %62)
+  %64 = icmp eq i32 %6, %0
+  br i1 %64, label %77, label %65
+
+65:                                               ; preds = %3, %59
+  %66 = phi i32 [ 0, %3 ], [ %63, %59 ]
+  %67 = phi i32 [ 1, %3 ], [ %7, %59 ]
+  br label %68
+
+68:                                               ; preds = %65, %68
+  %69 = phi i32 [ %74, %68 ], [ %66, %65 ]
+  %70 = phi i32 [ %75, %68 ], [ %67, %65 ]
+  %71 = and i32 %70, 1
+  %72 = xor i32 %71, 1
+  %73 = shl nuw nsw i32 %70, %72
+  %74 = add nuw nsw i32 %73, %69
+  %75 = add nuw i32 %70, 1
+  %76 = icmp eq i32 %70, %0
+  br i1 %76, label %77, label %68, !llvm.loop !8
+
+77:                                               ; preds = %68, %59, %1
+  %78 = phi i32 [ 0, %1 ], [ %63, %59 ], [ %74, %68 ]
+  ret i32 %78
+}
+
+; Function Attrs: nounwind uwtable
+define dso_local i32 @main() local_unnamed_addr #1 {
+  %1 = tail call i32 @getint() #4
+  %2 = icmp slt i32 %1, 1
+  br i1 %2, label %77, label %3
+
+3:                                                ; preds = %0
+  %4 = icmp ult i32 %1, 8
+  br i1 %4, label %65, label %5
+
+5:                                                ; preds = %3
+  %6 = and i32 %1, -8
+  %7 = or i32 %6, 1
+  %8 = add i32 %6, -8
+  %9 = lshr exact i32 %8, 3
+  %10 = add nuw nsw i32 %9, 1
+  %11 = and i32 %10, 1
+  %12 = icmp eq i32 %8, 0
+  br i1 %12, label %42, label %13
+
+13:                                               ; preds = %5
+  %14 = and i32 %10, 1073741822
+  br label %15
+
+15:                                               ; preds = %15, %13
+  %16 = phi <4 x i32> [ zeroinitializer, %13 ], [ %37, %15 ]
+  %17 = phi <4 x i32> [ zeroinitializer, %13 ], [ %38, %15 ]
+  %18 = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, %13 ], [ %39, %15 ]
+  %19 = phi i32 [ 0, %13 ], [ %40, %15 ]
+  %20 = add <4 x i32> %18, <i32 4, i32 4, i32 4, i32 4>
+  %21 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %22 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %23 = xor <4 x i32> %21, <i32 1, i32 1, i32 1, i32 1>
+  %24 = xor <4 x i32> %22, <i32 1, i32 1, i32 1, i32 1>
+  %25 = shl nuw nsw <4 x i32> %18, %23
+  %26 = shl nuw nsw <4 x i32> %20, %24
+  %27 = add <4 x i32> %25, %16
+  %28 = add <4 x i32> %26, %17
+  %29 = add <4 x i32> %18, <i32 8, i32 8, i32 8, i32 8>
+  %30 = add <4 x i32> %18, <i32 12, i32 12, i32 12, i32 12>
+  %31 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %32 = and <4 x i32> %18, <i32 1, i32 1, i32 1, i32 1>
+  %33 = xor <4 x i32> %31, <i32 1, i32 1, i32 1, i32 1>
+  %34 = xor <4 x i32> %32, <i32 1, i32 1, i32 1, i32 1>
+  %35 = shl nuw nsw <4 x i32> %29, %33
+  %36 = shl nuw nsw <4 x i32> %30, %34
+  %37 = add <4 x i32> %35, %27
+  %38 = add <4 x i32> %36, %28
+  %39 = add <4 x i32> %18, <i32 16, i32 16, i32 16, i32 16>
+  %40 = add i32 %19, 2
+  %41 = icmp eq i32 %40, %14
+  br i1 %41, label %42, label %15, !llvm.loop !10
+
+42:                                               ; preds = %15, %5
+  %43 = phi <4 x i32> [ undef, %5 ], [ %37, %15 ]
+  %44 = phi <4 x i32> [ undef, %5 ], [ %38, %15 ]
+  %45 = phi <4 x i32> [ zeroinitializer, %5 ], [ %37, %15 ]
+  %46 = phi <4 x i32> [ zeroinitializer, %5 ], [ %38, %15 ]
+  %47 = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, %5 ], [ %39, %15 ]
+  %48 = icmp eq i32 %11, 0
+  br i1 %48, label %59, label %49
+
+49:                                               ; preds = %42
+  %50 = add <4 x i32> %47, <i32 4, i32 4, i32 4, i32 4>
+  %51 = and <4 x i32> %47, <i32 1, i32 1, i32 1, i32 1>
+  %52 = and <4 x i32> %47, <i32 1, i32 1, i32 1, i32 1>
+  %53 = xor <4 x i32> %51, <i32 1, i32 1, i32 1, i32 1>
+  %54 = xor <4 x i32> %52, <i32 1, i32 1, i32 1, i32 1>
+  %55 = shl nuw nsw <4 x i32> %47, %53
+  %56 = shl nuw nsw <4 x i32> %50, %54
+  %57 = add <4 x i32> %55, %45
+  %58 = add <4 x i32> %56, %46
+  br label %59
+
+59:                                               ; preds = %42, %49
+  %60 = phi <4 x i32> [ %43, %42 ], [ %57, %49 ]
+  %61 = phi <4 x i32> [ %44, %42 ], [ %58, %49 ]
+  %62 = add <4 x i32> %61, %60
+  %63 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %62)
+  %64 = icmp eq i32 %1, %6
+  br i1 %64, label %77, label %65
+
+65:                                               ; preds = %3, %59
+  %66 = phi i32 [ 0, %3 ], [ %63, %59 ]
+  %67 = phi i32 [ 1, %3 ], [ %7, %59 ]
+  br label %68
+
+68:                                               ; preds = %65, %68
+  %69 = phi i32 [ %74, %68 ], [ %66, %65 ]
+  %70 = phi i32 [ %75, %68 ], [ %67, %65 ]
+  %71 = and i32 %70, 1
+  %72 = xor i32 %71, 1
+  %73 = shl nuw nsw i32 %70, %72
+  %74 = add nuw nsw i32 %73, %69
+  %75 = add nuw i32 %70, 1
+  %76 = icmp eq i32 %70, %1
+  br i1 %76, label %77, label %68, !llvm.loop !11
+
+77:                                               ; preds = %68, %59, %0
+  %78 = phi i32 [ 0, %0 ], [ %63, %59 ], [ %74, %68 ]
+  tail call void @putint(i32 noundef %78) #4
+  ret i32 0
+}
+
+declare i32 @getint() local_unnamed_addr #2
+
+declare void @putint(i32 noundef) local_unnamed_addr #2
+
+; Function Attrs: nofree nosync nounwind readnone willreturn
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) #3
+
+attributes #0 = { nofree norecurse nosync nounwind readnone uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #1 = { nounwind uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #2 = { "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #3 = { nofree nosync nounwind readnone willreturn }
+attributes #4 = { nounwind }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 7, !"PIC Level", i32 2}
+!2 = !{i32 7, !"PIE Level", i32 2}
+!3 = !{i32 7, !"uwtable", i32 1}
+!4 = !{!"Ubuntu clang version 14.0.0-1ubuntu1.1"}
+!5 = distinct !{!5, !6, !7}
+!6 = !{!"llvm.loop.mustprogress"}
+!7 = !{!"llvm.loop.isvectorized", i32 1}
+!8 = distinct !{!8, !6, !9, !7}
+!9 = !{!"llvm.loop.unroll.runtime.disable"}
+!10 = distinct !{!10, !6, !7}
+!11 = distinct !{!11, !6, !9, !7}
