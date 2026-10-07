@@ -27,7 +27,10 @@
 | `outputs/optimization-*.diff` | Stage 7 脚本 | 真实 O0/O2 unified diff | 是 |
 | `outputs/optimization-analysis.md` | 实验分析 | 实际优化变化说明 | 是 |
 | `mlir/references/README.md` | LLVM 与 Ascend 官方资料 | MLIR VecAdd 参考来源 | 是 |
-| `records/00`–`09` | 各阶段记录 | 过程、结果、验收与限制 | 是 |
-| `scripts/00`–`09` | 本实验脚本 | 重现工具检查、构建和验证 | 是 |
-| `logs/00`–`09` | 阶段实际 stdout/stderr | 过程证据 | 按需引用 |
-| `report/` | Stage 10 | 正式 PDF 报告及图表 | 是 |
+| `report/report.md` | Stage 10 | 报告源稿，含图表说明、结果与参考文献 | 是 |
+| `report/report.pdf` | Stage 10 | 五页最终 PDF 实验报告 | 是 |
+| `scripts/10_build_report.sh`, `scripts/10_render_report.py` | Stage 10 | 可重复构建并结构校验报告 PDF | 是 |
+| `records/00`–`10` | 各阶段记录 | 过程、结果、验收与限制 | 是 |
+| `scripts/00`–`10` | 本实验脚本 | 重现工具检查、构建和验证 | 是 |
+| `logs/00`–`10` | 阶段实际 stdout/stderr | 过程证据 | 按需引用 |
+| `records/FINAL_HANDOFF.md` | Stage 10 | 完成状态、提交和限制汇总 | 是 |
