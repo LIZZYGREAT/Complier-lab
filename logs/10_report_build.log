@@ -1,0 +1,15 @@
+Stage 10: build the final PDF report from report/report.md
+Source: report/report.md
+Output: report/report.pdf
+Pages: 5
+Bytes: 86598
+SHA-256: 90b05102ef052be0ba753fc7e7f95350adb0b7d34ef8a48e69c4d1fa0a387982
+Structure, xref offsets, CJK font reference, and ToUnicode map: PASS
+Generator: Python standard-library vector PDF writer.
+Visual review: no PDF preview renderer is installed in this environment.
+
+[PDF artifact]
+report/report.pdf: PDF document, version 1.7, 5 pages
+90b05102ef052be0ba753fc7e7f95350adb0b7d34ef8a48e69c4d1fa0a387982  report/report.pdf
+
+Stage 10 report build: PASS
