@@ -1,0 +1,51 @@
+Compiler-Labs Stage 0 environment snapshot
+Date: 2026-10-07T17:07:09+08:00
+Workspace: /home/lenovo/projects/Compiler-Labs
+Lab: /home/lenovo/projects/Compiler-Labs/lab
+COMPILER_HOME=/home/lenovo/opt/compiler
+RISCV_TOOLCHAIN=/home/lenovo/opt/compiler/riscv-elf-toolchains
+
+[Operating system]
+Linux LAPTOP-VTCMVS9N 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+VERSION_ID="22.04"
+
+[Required tools]
+gcc                                /usr/bin/gcc
+clang                              /usr/bin/clang
+make                               /usr/bin/make
+flex                               /usr/bin/flex
+bison                              /usr/bin/bison
+python3                            /usr/bin/python3
+qemu-riscv64                       /home/lenovo/opt/compiler/qemu/bin/qemu-riscv64
+riscv64-unknown-elf-gcc            /home/lenovo/opt/compiler/riscv-elf-toolchains/bin/riscv64-unknown-elf-gcc
+riscv64-unknown-elf-readelf        /home/lenovo/opt/compiler/riscv-elf-toolchains/bin/riscv64-unknown-elf-readelf
+
+[Tool versions]
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+Ubuntu clang version 14.0.0-1ubuntu1.1
+GNU Make 4.3
+flex 2.6.4
+bison (GNU Bison) 3.8.2
+Python 3.10.12
+qemu-riscv64 version 7.0.0
+riscv64-unknown-elf-gcc (g1b306039ac4) 15.1.0
+
+[Existing course compiler artifacts]
+PRESENT /home/lenovo/projects/Compiler-Labs/SysY_Compiler_2025/bin/compiler
+PRESENT /home/lenovo/projects/Compiler-Labs/SysY_Compiler_2025/lib/libsysy_riscv.a
+PRESENT /home/lenovo/projects/Compiler-Labs/SysY_Compiler_2025/lib/libsysy_x86.a
+## main...origin/main
+ M include/parser/location.hh
+ M include/parser/yacc.hpp
+ M lib/libsysy_riscv.a
+ M lib/libsysy_x86.a
+ M src/parser/lexer.cpp
+ M src/parser/yacc.cpp
+
+[Stage 0 source files]
+PRESENT source/example.sy
+PRESENT source/example_clang.c
+PRESENT source/host_runtime.c
+
+Stage 0 environment and directory checks: PASS

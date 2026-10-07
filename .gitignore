@@ -1,0 +1,36 @@
+# Executables / object files
+*.o
+*.out
+*.bin
+*.exe
+
+# Core dumps
+core
+core.*
+
+# Editor temporary files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# LaTeX temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Experiment logs are required evidence and must remain versioned.
+!logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
