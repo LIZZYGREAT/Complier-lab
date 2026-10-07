@@ -1,80 +1,79 @@
-# 阶段 8：MLIR / AscendNPU VecAdd lowering 资料分析
+# 阶段 8：MLIR / AscendNPU IR VecAdd 与 PlanMemory
 
-## 目标
+## 目标与边界
 
-围绕 `C[j] = A[j] + B[j]`，说明从张量运算到 Ascend NPU 执行所需的表示如何逐层增加硬件细节，并解释 MLIR 多 dialect 的用途。
+本轮进阶任务围绕 16 个 `int16` 元素的 VecAdd，解释 MLIR 为何保留多层抽象，以及 HIVM 如何把 GM / UB、显式数据搬运和 NPU 向量运算带入 IR。环境不满足低成本构建条件，因此按任务方案使用官方资料和真实上游 Test Case 做源码分析，没有声称运行本地 Ascend Pass。
 
-## 输入
+项目已存在的实验目录为 `lab/`，故本轮文件按当前仓库结构放在 `lab/mlir/`，而不是另建 `assignment1/mlir/`。
 
-- LLVM Project 的 MLIR Language Reference、Rationale 和 Target LLVM IR 文档。
-- Ascend 官方 AscendNPU-IR Framework Integration、Interface API 和 HIVM VecAdd 集成示例。
-- 本阶段未发现本地课程 PDF/PPT；MLIR/Ascend 编译器与 NPU 执行环境也未安装。
+## Stage 0：环境检查和构建决策
 
-## 执行命令
+只读检查结果见 `mlir/logs/environment.log`：Ubuntu 22.04.5 x86_64，CMake 不存在，Ninja 为 1.10.1，Clang 为 14.0.0。AscendNPU-IR 官方构建要求 CMake ≥ 3.28、Ninja ≥ 1.12；当前至少两个关键构建条件不满足，且检查路径未发现用户级 `cmake`、`ninja` 或 `bishengir-opt`。按任务停止条件，没有安装/升级系统工具，也没有克隆源码，选择 Stage 1B。
 
-```bash
-bash scripts/08_mlir_exploration.sh 2>&1 | tee logs/08_mlir_exploration.log
+## VecAdd 主线
+
+固定语义为 `c[i] = a[i] + b[i]`，`0 ≤ i < 16`。官方 [HIVM VecAdd `add.mlir`](https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/add.mlir) 的输入已保存到 `mlir/sources/vecadd_hivm.mlir`。三个参数均属于 GM；A、B 通过 `hivm.hir.load` 搬到 UB；`hivm.hir.vadd` 在 UB 计算；`hivm.hir.store` 把结果写回 GM。`hacc.entry` 与 `hacc.function_kind<DEVICE>` 标记设备侧入口。
+
+概念主线为：
+
+```text
+Arith / Tensor
+    ↓ 元素类型、shape、逐元素加语义
+Linalg / HFusion
+    ↓ 算子融合、tiling、调度
+HIVM
+    ↓ GM / UB、load / vadd / store、内存规划与同步
+HACC / LLVM 后续表示
 ```
 
-官方 `add.mlir` 示例可读作：
+MLIR 的价值不只是拥有多个 IR 层级，而是让不同阶段在合适的抽象上优化：张量形状和算子边界尚在时可以分析 fusion 和 tiling；进入 HIVM 后再显式安排存储层次、搬运路径和 NPU 计算。若过早摊平成低层 load/store，后续 pass 就难直接利用算子与张量语义。LLVM IR 可作为后续低层通用表示；此次没有观察到该 VecAdd 的 LLVM IR dump。
 
-```mlir
-func.func @add(
-    %a: memref<16xi16, #hivm.address_space<gm>>,
-    %b: memref<16xi16, #hivm.address_space<gm>>,
-    %c: memref<16xi16, #hivm.address_space<gm>>)
-    attributes {hacc.entry, hacc.function_kind = #hacc.function_kind<DEVICE>} {
-  %ub_a = memref.alloc() : memref<16xi16, #hivm.address_space<ub>>
-  hivm.hir.load ins(%a : memref<16xi16, #hivm.address_space<gm>>)
-                outs(%ub_a : memref<16xi16, #hivm.address_space<ub>>)
-  %ub_b = memref.alloc() : memref<16xi16, #hivm.address_space<ub>>
-  hivm.hir.load ins(%b : memref<16xi16, #hivm.address_space<gm>>)
-                outs(%ub_b : memref<16xi16, #hivm.address_space<ub>>)
-  %ub_c = memref.alloc() : memref<16xi16, #hivm.address_space<ub>>
-  hivm.hir.vadd ins(%ub_a, %ub_b : memref<16xi16, #hivm.address_space<ub>>,
-                                  memref<16xi16, #hivm.address_space<ub>>)
-                outs(%ub_c : memref<16xi16, #hivm.address_space<ub>>)
-  hivm.hir.store ins(%ub_c : memref<16xi16, #hivm.address_space<ub>>)
-                 outs(%c : memref<16xi16, #hivm.address_space<gm>>)
-  return
-}
+HFusion 到 HIVM 的图是依官方多层接入文档和作业要求建立的概念路线。本地真实保存并逐行分析的是官方 HIVM VecAdd；没有声称本机执行了从 HFusion 到 HIVM 的转换。
+
+## PlanMemory：官方源码 Test Case 分析
+
+在官方 [PlanMemory 文档](https://ascendnpu-ir.gitcode.com/en/developer_guide/features/PlanMemory/PlanMemory.html) 中，`memref.alloc` 具有 buffer 大小和地址空间，但没有具体地址。PlanMemory 根据生命周期、别名及硬件规则分配片上地址，并将局部 `memref.alloc` 改写为 `hivm.hir.pointer_cast(offset)`。
+
+使用的真实上游文件是 [官方 `plan-memory.mlir`](https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/plan-memory.mlir) 中的 `test_mem_allocate_basic`。其上游 `RUN` 为：
+
+```sh
+bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
 ```
 
-This is transcribed from the official VecAdd example, not compiled locally. Its exact source URL is listed in `mlir/references/README.md`.
+该用例输入有四个独立 UB `memref.alloc()`，类型均为 `16×16×16×f16`，每块 8192 字节。上游 `CHECK` 要求变换结果中不再有 `memref.alloc()`，并检查四个分配位置都对应偏移 0 的 `hivm.hir.pointer_cast`。这展示了 pass 把“申请 UB 临时区”转成显式地址表达的结果形状。
 
-## 关键分析
+这里的 `CHECK` 是官方测试源中的期望，不是我们运行产生的输出。由于本机没有 `bishengir-opt` 和 `FileCheck`，没有生成 `plan_memory_before.mlir` 或 `plan_memory_after.mlir`；具体运行状态见 `mlir/logs/pass_runs.log`，结构解释见 `mlir/analysis/plan_memory_analysis.md`。不把该单一用例的 offset-0 期望推广到所有程序。
 
-| 表示层 | VecAdd 的关注点 | 新增信息 |
+## 资料理解与真实运行的区分
+
+| 内容 | 证据类型 | 本轮结果 |
 | --- | --- | --- |
-| Arith / Tensor | 元素类型、形状和逐元素加法；元素运算可用 `arith.addi`，张量层描述 `tensor<16xi16>` 等值 | 算法语义与形状，不指定 NPU 地址空间或搬运指令 |
-| Linalg / HFusion | `linalg.elemwise_binary` 等保留张量级 elementwise 语义；HFusion 对满足条件的算子做融合、tiling 与调度 | 算子组合与执行计划；仍可按 tensor/算子理解 |
-| HIVM | 官方例子把 A/B/C 标为 GM，显式分配 UB 暂存区，执行 GM→UB load、`hivm.hir.vadd`、UB→GM store | Ascend 存储层次、向量操作与内存搬运；需要时由编译流程做内存规划和同步插入 |
-| HACC | `hacc.entry` 和 `hacc.function_kind<DEVICE>` 标记 kernel 入口与执行侧；配套 host wrapper 初始化 ACL、准备数据、launch、同步并拷回结果 | 主机与设备边界、kernel entry/launch 元数据，不改变加法本身 |
-| LLVM IR / 目标代码 | 经过转换后，面向后端的低层操作可表示为 LLVM dialect/LLVM IR 或硬件 intrinsic，再继续目标代码生成 | 更明确的控制流、类型转换、指针与指令/调用约定，较少保留高层张量语义 |
+| 16×`i16` VecAdd 的 GM/UB/load/vadd/store | 官方上游源文件摘录 | 已保存并结构分析，未编译 |
+| PlanMemory 的功能和地址规划机制 | 官方 Pass 文档 | 已阅读 |
+| PlanMemory 输入、`RUN` 和 `CHECK` | 官方上游 `plan-memory.mlir` Test Case | 已保存摘录和链接，未在本机执行 |
+| 本机 Ascend Pass Before / After | 真实运行结果 | 未产生 |
+| Sync 独立用例 | 可选实验 | 本轮跳过 |
+| CANN、kernel `.o`、NPU Runtime | 硬件端到端 | 未尝试 |
 
-## Lowering 与资料边界
-
-MLIR 的 `Operation`、`Value`、`Block`、`Region` 让不同抽象层可以留在同一个可扩展 IR 框架里；dialect 定义各层自己的操作、类型和属性。Lowering 是一系列保持程序语义的转换：先让通用优化仍能看到张量/算子结构，再逐步确定 tiling、内存空间、数据搬运和硬件操作。若过早降到普通 load/store，后续 pass 很难恢复原有算子边界和张量形状。
-
-课程文档给出的 `Arith/Tensor → HFusion → HIVM → HACC → LLVM IR` 可用作概念路线。按本次查阅的当前公开 AscendNPU-IR 样例，Linalg/Tensor 与 HFusion 组成算子和调度层，HIVM 样例使用 `hivm.hir.vadd`；HACC 以入口/host-device 属性和 host wrapper 体现。官方可运行示例要求 CANN、`bishengir-compile` 和 NPU；示例的明确产物是 kernel `.o`，本资料中没有保存可供复核的 Ascend LLVM IR dump。LLVM IR 是通用 MLIR lowering 机制的后续表示，不应在本记录中伪称为该 VecAdd 示例实测得到的中间文件。
-
-这次只完成文档与源码阅读，没有运行 `bishengir-opt`、`bishengir-compile`，没有安装 CANN，也没有在 Ascend 硬件上执行。因此表中高层 Arith/Tensor 描述是语义示意；只有 HIVM `add.mlir` 片段和 host wrapper 调用流程来自官方项目源文件。
+因此本部分是基于官方文档和真实源码 Test Case 的结构分析，未声称完成真实 Ascend Pass 运行或 NPU 上板。
 
 ## 生成产物
 
-- `mlir/references/README.md`：官方来源清单及访问日期。
-- `scripts/08_mlir_exploration.sh`
-- `logs/08_mlir_exploration.log`
-- `records/08_mlir_exploration.md`
+- `mlir/README.md`：本轮范围和状态。
+- `mlir/sources/vecadd_hivm.mlir`：官方 16×`i16` HIVM VecAdd。
+- `mlir/sources/selected_tests/plan_memory_input.mlir`：上游 PlanMemory 用例摘录，含原始 RUN/CHECK。
+- `mlir/analysis/lowering_chain.md`：多层 IR 与 VecAdd 硬件映射分析。
+- `mlir/analysis/plan_memory_analysis.md`：PlanMemory Test Case 分析。
+- `mlir/references/source_index.md`：官方文档和源码索引。
+- `mlir/logs/environment.log`、`build.log`、`pass_runs.log`：检查、停止决策和运行范围记录。
+- 未创建 `mlir/outputs/` Before/After 文件，因为本机没有运行 Pass。
 
-## 结果解释
+## 完成状态
 
-LLVM IR 通常更接近目标无关的低层指令表示；MLIR 允许多个具有专门语义的 dialect 并存，按需求渐进 lowering。对 VecAdd 来说，最核心的变化是从“两个形状相同的张量逐元素相加”变成“从 GM 搬到 UB、执行 NPU vector add、再写回 GM”，同时由 HACC/运行时负责把 device kernel 与 host 调用衔接。
-
-## 验收结果
-
-PASS（资料分析）— 已按 Arith/Tensor、HFusion、HIVM、HACC、LLVM IR 逐层解释 lowering，并明确标注未运行编译器/未上板。
-
-## 异常
-
-无。工具缺失和没有本地课程演示材料已如实记入日志；按照阶段方案使用官方文档与官方 VecAdd 源码完成分析。
+- VecAdd 主线：PASS
+- 官方资料核对：PASS
+- bishengir-opt 构建：SKIPPED（CMake 缺失、Ninja 版本低于最低要求）
+- PlanMemory 实验：ANALYSIS-ONLY
+- Sync 实验：SKIPPED
+- CANN：NOT ATTEMPTED
+- NPU 上板：NOT ATTEMPTED

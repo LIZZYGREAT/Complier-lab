@@ -26,7 +26,13 @@
 | `exploration/O0_riscv.s`, `exploration/O2_riscv.s` | Clang | RV64 汇编对照 | 是 |
 | `outputs/optimization-*.diff` | Stage 7 脚本 | 真实 O0/O2 unified diff | 是 |
 | `outputs/optimization-analysis.md` | 实验分析 | 实际优化变化说明 | 是 |
-| `mlir/references/README.md` | LLVM 与 Ascend 官方资料 | MLIR VecAdd 参考来源 | 是 |
+| `mlir/README.md` | 本轮进阶任务记录 | MLIR / AscendNPU IR 入口、范围、结果状态 | 是 |
+| `mlir/sources/vecadd_hivm.mlir` | Ascend 官方 HIVM VecAdd | 16×`i16` 的 GM/UB/load/vadd/store 源样例 | 是 |
+| `mlir/sources/selected_tests/plan_memory_input.mlir` | Ascend 官方 `plan-memory.mlir` 摘录 | 真实上游 `RUN` 和 `CHECK`，未本地执行 | 是 |
+| `mlir/analysis/lowering_chain.md` | LLVM 与 Ascend 官方资料分析 | 多层抽象与 HIVM 硬件映射 | 是 |
+| `mlir/analysis/plan_memory_analysis.md` | Ascend 官方 PlanMemory 文档和 Test Case | 分析 alloc 到 pointer_cast 的预期变化 | 是 |
+| `mlir/references/source_index.md` | LLVM 与 Ascend 官方资料 | 官方文档和源码索引 | 是 |
+| `mlir/logs/environment.log`, `build.log`, `pass_runs.log` | 本轮只读环境检查与执行留痕 | 构建决策及 analysis-only 证据边界 | 按需引用 |
 | `report/report.tex` | Stage 10 | LaTeX 正式报告源文件，含 TikZ 图表 | 是 |
 | `report/report.pdf` | Stage 10 | Tectonic 从 LaTeX 编译的最终 PDF | 是 |
 | `scripts/10_build_report.sh` | Stage 10 | 使用隔离的临时引擎/缓存构建 PDF | 是 |

@@ -1,0 +1,8 @@
+Pass execution status: ANALYSIS-ONLY; no local Pass command was run.
+
+Official upstream Test Case: bishengir/test/Dialect/HIVM/plan-memory.mlir
+Official RUN line (source evidence, not executed locally):
+  bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+
+The saved test excerpt preserves its upstream RUN/CHECK comments. `bishengir-opt` and `FileCheck` were not available locally. No `plan_memory_before.mlir` or `plan_memory_after.mlir` output is claimed or saved.
+Sync Test Case: SKIPPED; PlanMemory source analysis was sufficient for the scoped exploration.
