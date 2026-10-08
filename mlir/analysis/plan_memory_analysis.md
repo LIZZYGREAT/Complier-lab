@@ -5,8 +5,10 @@
 选用 AscendNPU-IR 的 `bishengir/test/Dialect/HIVM/plan-memory.mlir` 中 `test_mem_allocate_basic` 用例。上游文件的 `RUN` 是：
 
 ```sh
-bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
 ```
+
+该文件还有第二条 `RUN`，用 `-hivm-plan-memory=plan-memory-strategy=largest-first` 并以 `CHECK-REORDER` 前缀检查；下面只分析第一条（默认策略）。两条都要求 `-hacc-append-device-spec=target=Ascend910B1`，缺少该参数时 Pass 无法确定目标芯片规格。
 
 本地摘录在 [`sources/selected_tests/plan_memory_input.mlir`](../sources/selected_tests/plan_memory_input.mlir)。摘录保留该用例的 `RUN`、输入 IR 和 `CHECK` 指令。官方文档说明 PlanMemory 会根据 buffer 生命周期和硬件约束规划地址，并把局部 `memref.alloc` 改写为 `hivm.hir.pointer_cast(offset)`。
 
