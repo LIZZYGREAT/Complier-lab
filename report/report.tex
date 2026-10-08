@@ -78,7 +78,7 @@
 
 本实验固定一个程序，避免不同算法导致比较基准变化。程序令 $i$ 从 1 递增到输入 $n$，若 $i$ 为偶数则将 $2i$ 加入 sum，否则将 $i$ 加入 sum，最后输出 sum。程序覆盖局部整型变量、赋值、加法、乘法、取模、比较、条件分支、循环、函数参数、函数返回和运行库调用。所有实现都使用同一输入集合验证。
 
-全文围绕四个问题组织。第一，预处理、编译、汇编、链接各自做了什么，产物之间是什么关系（第 3 节）；第二，源程序的条件与循环如何变成 LLVM 基本块和 \code{br}，又如何能独立手写出一份等价 IR（第 4 节）；第三，同一逻辑在 RV64 上如何落到寄存器、栈帧和调用约定（第 5 节）；第四，优化级别和抽象层次的变化会带来什么（第 7、8 节）。所有结论都来自本机真实产物，原始命令、输出和中间文件分别保存在 \code{scripts/}、\code{logs/} 和 \code{records/} 中，第 9 节给出复现入口。
+全文依次回答四个问题：预处理、编译、汇编、链接各自做了什么，产物之间是什么关系（第 3 节）；源程序的条件与循环如何变成 LLVM 基本块和 \code{br}，又如何独立手写出一份等价 IR（第 4 节）；同一逻辑在 RV64 上如何落到寄存器、栈帧和调用约定（第 5 节）；优化级别和抽象层次的变化会带来什么（第 7、8 节）。所有结论都来自本机真实产物，原始命令、输出和中间文件分别保存在 \code{scripts/}、\code{logs/} 和 \code{records/} 中，第 9 节给出复现入口。
 
 \section{实验对象与工具环境}
 
@@ -176,7 +176,7 @@ int calc(int n) {
     ...
 \end{lstlisting}
 
-行标记形如 \code{# 行号 "文件名" 标志}，供后续阶段和调试器把生成代码映射回源文件；\code{<built-in>} 是编译器内建的定义集合。除这 11 行标记外，\code{.i} 内容与输入逐字相同——这恰好从反面说明预处理阶段“没有做什么”：它不建立符号表、不检查类型、也不理解控制流，这些都属于下一节的编译阶段。
+行标记形如 \code{# 行号 "文件名" 标志}，供后续阶段和调试器把生成代码映射回源文件；\code{<built-in>} 是编译器内建的定义集合。除这 11 行标记外，\code{.i} 内容与输入逐字相同。预处理器不建立符号表、不检查类型、也不理解控制流，这些工作都在下一节的编译阶段完成。
 
 \subsection{编译器内部各阶段}
 
@@ -239,7 +239,7 @@ Entry point address:       0x0
 Start of program headers:  0 (bytes into file)
 \end{lstlisting}
 
-\code{Type} 为 \code{REL} 而非 \code{EXEC}/\code{DYN}，\code{Entry point} 为 \code{0x0}，且程序头数量为 0，说明该文件只是“待合并的部件”：地址未定、没有进程映像布局，无法被内核直接加载执行。两处细节值得注意。其一，符号表把 \code{calc}/\code{main} 标为 \code{FUNC} 且带字节大小，而 \code{getint}/\code{putint} 标为 \code{UND}，直观展示了“本文件提供什么”与“本文件还欠什么”。其二，重定位项中除外部符号外还出现了 \code{calc}——本机 Clang 默认使用 PIE，模块内调用同样经 PLT 重定位，其最终地址由链接器确定，这也解释了为什么 \code{.rela.text} 中有 3 条记录而不是 2 条。
+\code{Type} 为 \code{REL} 而非 \code{EXEC}/\code{DYN}，\code{Entry point} 为 \code{0x0}，且程序头数量为 0，说明该文件只是“待合并的部件”：地址未定、没有进程映像布局，无法被内核直接加载执行。符号表与重定位项还提供了两点信息。其一，符号表把 \code{calc}/\code{main} 标为 \code{FUNC} 且带字节大小，而 \code{getint}/\code{putint} 标为 \code{UND}，即本文件提供什么、还欠什么。其二，重定位项中除外部符号外还出现了 \code{calc}——本机 Clang 默认使用 PIE，模块内调用同样经 PLT 重定位，其最终地址由链接器确定，这也解释了为什么 \code{.rela.text} 中有 3 条记录而不是 2 条。
 
 \subsection{链接}
 
@@ -310,7 +310,7 @@ Clang -O0 生成的 calc 使用数字标签。入口块初始化 i 和 sum 后�
 
 \subsection{手写 LLVM IR}
 
-手写 \code{llvm/manual.ll} 不复用 Clang 的输出，而是按上面的 CFG 直接组织命名基本块。与自动生成版本的差异恰好说明了“人工设计”与“工具默认策略”的区别：块名是语义化的 \code{while.cond} 而不是 \texttt{\%5}；没有 \code{attributes}、\code{!llvm.loop} 等约定性元数据；\code{main} 中直接用 SSA 值传递 \code{getint} 与 \code{calc} 的返回值，不再绕经栈槽。控制流与算术指令则与源程序逐项对应。
+手写 \code{llvm/manual.ll} 不复用 Clang 的输出，而是按上面的 CFG 直接组织命名基本块。与自动生成版本相比，手写版做了几处不同选择：块名用语义化的 \code{while.cond} 而不是 \texttt{\%5}；不产生 \code{attributes}、\code{!llvm.loop} 等元数据；\code{main} 中直接用 SSA 值传递 \code{getint} 与 \code{calc} 的返回值，不再绕经栈槽。控制流与算术指令仍与源程序逐项对应。
 
 \begin{lstlisting}
 declare i32 @getint()
@@ -390,7 +390,7 @@ entry:
   \end{tabularx}
 \end{table}
 
-两份 IR 使用的指令集合完全相同——\code{alloca}、\code{load}、\code{store}、\code{add}、\code{mul}、\code{srem}、\code{icmp}、\code{br}、\code{call}、\code{ret} 逐条对应，既没有新增也没有缺失的操作。表~\ref{tab:ir-compare} 中“指令集合”一行是关键：两份 IR 的语义操作完全一致，差别只在命名、元数据和值表示的组织方式。这说明 \code{-O0} 下 LLVM IR 到源程序的映射是相对直接的，也说明手写实现可以在保留全部语义的前提下采用更适合人阅读的组织形式。
+两份 IR 使用的指令集合完全一致：\code{alloca}、\code{load}、\code{store}、\code{add}、\code{mul}、\code{srem}、\code{icmp}、\code{br}、\code{call}、\code{ret} 逐条对应，没有新增或缺失的操作（表~\ref{tab:ir-compare}）。可见 \code{-O0} 下 LLVM IR 到源程序的映射比较直接，两份实现的差别只在命名、元数据和值表示的组织方式。
 
 \section{RISC-V 汇编与 ABI}
 
@@ -420,7 +420,7 @@ calc:
     bne  a0, zero, .LBB0_4
 \end{lstlisting}
 
-把这段与下一节的手写版本对照，可以得到三个具体结论。第一，\emph{栈帧完全一致}：Clang 同样用 32 字节帧、\code{ra} 存 \code{24(sp)}、\code{s0} 存 \code{16(sp)}、三个局部量放在 \code{-20/-24/-28(s0)}，说明手写实现在没有照抄的情况下收敛到了与真实后端相同的布局。第二，\emph{取模的实现不同}：RV64 没有硬件取余指令，\code{remw} 需要微码或库调用，因此 Clang 把 $i \bmod 2$ 展开成 \code{lwu/srli/add/andi/subw} 五条定点运算；手写版本直接用 \code{remw} 加 \code{beqz}，更贴近源程序语义但指令条数更少，这也说明“指令少”不等于“更快”。第三，\emph{\code{main} 的帧大小不同}：Clang 的 \code{main} 用 48 字节，因为它把返回值先 \code{sd} 溢出到栈再取出；手写 \code{main} 只用 16 字节，返回值始终留在 \code{a0} 中直接传递。
+与下一节的手写版本对照，有三处差异。其一，\emph{栈帧完全一致}：Clang 同样用 32 字节帧、\code{ra} 存 \code{24(sp)}、\code{s0} 存 \code{16(sp)}、三个局部量放在 \code{-20/-24/-28(s0)}，说明手写实现在没有照抄的情况下收敛到了与真实后端相同的布局。其二，\emph{取模的实现不同}：RV64 没有硬件取余指令，\code{remw} 需要微码或库调用，因此 Clang 把 $i \bmod 2$ 展开成 \code{lwu/srli/add/andi/subw} 五条定点运算；手写版本直接用 \code{remw} 加 \code{beqz}，更贴近源程序语义但指令条数更少，这也说明“指令少”不等于“更快”。其三，\emph{\code{main} 的帧大小不同}：Clang 的 \code{main} 用 48 字节，因为它把返回值先 \code{sd} 溢出到栈再取出；手写 \code{main} 只用 16 字节，返回值始终留在 \code{a0} 中直接传递。
 
 \begin{table}[H]
   \centering\small
@@ -521,7 +521,7 @@ calc:
     ret
 \end{lstlisting}
 
-\code{main} 只保留 16 字节栈帧用于存放 \code{ra}，连续调用 \code{getint}、\code{calc}、\code{putint}，三者之间的整数传递全部通过 \code{a0} 完成；这体现了“参数与返回值共用 \code{a0}“这一约定。
+\code{main} 只保留 16 字节栈帧用于存放 \code{ra}，连续调用 \code{getint}、\code{calc}、\code{putint}，三者之间的整数传递全部通过 \code{a0} 完成，即参数与返回值共用一个寄存器。
 
 \subsection{链接与运行}
 
@@ -547,11 +547,11 @@ calc:
   \end{tabular}
 \end{table}
 
-表~\ref{tab:validation} 的数字来自脚本 \code{scripts/09\_final\_validation.sh} 的实际输出。测试框架是 \code{source/test\_reference.sh}：它把六组 \code{输入 期望值} 硬编码为一个列表，逐组把输入喂给被测可执行文件，再与\emph{期望值}比较——注意不是与另外两个实现的输出比较。这一点很重要：三路实现互相一致但集体出错的情况不会被漏掉，只有三者都等于 Stage 1 固定的 Ground Truth 才算通过。
+表~\ref{tab:validation} 的数字来自脚本 \code{scripts/09\_final\_validation.sh} 的实际输出。测试框架是 \code{source/test\_reference.sh}：它把六组 \code{输入 期望值} 硬编码为一个列表，逐组把输入喂给被测可执行文件，再与\emph{期望值}比较，而不是与另外两个实现的输出比较。这样三路一致但集体出错的情况同样会被检出，只有三者都等于 Stage 1 固定的 Ground Truth 才算通过。
 
 各阶段结果分别留证于 \code{outputs/} 下的 \code{reference-test.txt}、\code{manual-llvm-test.txt} 与 \code{manual-riscv-test.txt}，汇总表为 \code{final-validation.md}，完整命令输出见 \code{logs/09_final_validation.log}。其中 RISC-V 一列由 \code{qemu-riscv64} 执行，课程 runtime 会在每次运行结束后向标准错误输出 \code{TOTAL: 0H-0M-0S-0us} 计时摘要；比较脚本只取标准输出，因此该摘要保留在日志中而不参与判定。
 
-三份实现的栈帧、寄存器使用和指令选择各不相同，却得到完全相同的数值结果，这说明前面的 CFG 分析、ABI 说明和手写实现确实保持了源程序的语义等价性。
+三份实现的栈帧、寄存器使用和指令选择各不相同，结果却完全一致，可佐证两套手写实现与源程序语义等价。
 
 \section{优化观察：-O0 与 -O2}
 
@@ -577,7 +577,7 @@ calc:
 
 \subsection{从内存槽到 SSA}
 
-\code{-O0} 把每个局部变量放进取址栈槽，任何读写都要经过 \code{load}/\code{store}。\code{-O2} 在 IR 上执行 mem2reg 一类变换后，可变变量成为 SSA 值；循环中跨迭代传递的量则用 \code{phi} 节点表达。本例最直观的证据是 \code{alloca/load/store} 全部归零、\code{phi} 从 0 增至 32。这解释了为什么“优化”首先改变的不是指令条数，而是\emph{值的表示方式}：寄存器化之后，后续的算术化简和向量化才有作用对象。
+\code{-O0} 把每个局部变量放进取址栈槽，任何读写都要经过 \code{load}/\code{store}。\code{-O2} 在 IR 上执行 mem2reg 一类变换后，可变变量成为 SSA 值；循环中跨迭代传递的量则用 \code{phi} 节点表达。本例中 \code{alloca/load/store} 全部归零、\code{phi} 从 0 增至 32。这一步先改变的是\emph{值的表示方式}而非指令条数；寄存器化之后，算术化简和向量化才有作用对象。
 
 \subsection{奇偶判断被改写成位运算}
 
@@ -601,7 +601,7 @@ calc:
     ret
 \end{lstlisting}
 
-这段代码值得逐行读。\code{not}/\code{andi} 取出 $i$ 的奇偶位再取反，得到“$i$ 为偶数时为 1，否则为 0”的移位量；\code{sllw a2, a3, a2} 做变长左移，一次性完成原程序的两个分支——偶数时左移 1 位即乘 2，奇数时左移 0 位即原值。整个 \code{if/else} 因此消失，只剩一个循环。此外 \code{calc} 在 \code{-O2} 下没有建立任何栈帧（无 \code{sp} 调整、无 \code{ra} 保存），因为优化后它已不含函数调用，成为叶子函数。
+\code{not}/\code{andi} 取出 $i$ 的奇偶位再取反，得到“$i$ 为偶数时为 1，否则为 0”的移位量；\code{sllw a2, a3, a2} 做变长左移，同时覆盖了原程序的两个分支：偶数时左移 1 位即乘 2，奇数时左移 0 位即原值。整个 \code{if/else} 因此消失，只剩一个循环。此外 \code{calc} 在 \code{-O2} 下没有建立任何栈帧（无 \code{sp} 调整、无 \code{ra} 保存），因为优化后它已不含函数调用，成为叶子函数。
 
 \subsection{两种目标的低层差异}
 
@@ -683,7 +683,7 @@ func.func @add(%arg0: memref<16xi16, #hivm.address_space<gm>>,
 }
 \end{lstlisting}
 
-与高层表示相比，这里的 \code{memref.alloc} 都显式标注 \code{<ub>} 地址空间，\code{hivm.hir.load}/\code{store} 把“从哪搬到哪”写成显式指令。这正是 NPU 编程与普通标量程序的关键差别：计算必须在片上存储（UB）进行，数据必须先从全局内存（GM）搬入、算完再搬回，因此原本隐含的硬件执行策略被编码进了 IR。\cite{ascend-framework,ascend-vecadd}
+与高层表示相比，这里的 \code{memref.alloc} 都显式标注 \code{<ub>} 地址空间，\code{hivm.hir.load}/\code{store} 把“从哪搬到哪”写成显式指令。NPU 编程与普通标量程序的区别在于：计算必须在片上存储（UB）上进行，数据要先从全局内存（GM）搬入、算完再搬回。这些原本隐含的硬件执行策略由此被写入 IR。\cite{ascend-framework,ascend-vecadd}
 
 \subsection{PlanMemory 上游用例分析}
 
@@ -696,7 +696,7 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
 // CHECK-NOT: memref.alloc()
 // CHECK: hivm.hir.pointer_cast ... offset = 0
 \end{lstlisting}
-\code{CHECK-NOT} 断言输出不再包含 \code{memref.alloc()}，\code{CHECK} 要求这些 buffer 被改写为带偏移的 \code{pointer_cast}。这说明 Pass 的作用不是改变计算语义，而是把“我需要一块 UB”这一抽象请求落实为“这块 UB 在各硬件缓冲区中的具体地址”。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
+\code{CHECK-NOT} 断言输出不再包含 \code{memref.alloc()}，\code{CHECK} 要求这些 buffer 被改写为带偏移的 \code{pointer_cast}。可见该 Pass 不改变计算语义，只把抽象的 UB 分配请求落实为各硬件缓冲区中的具体地址。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
 
 \subsection{观察范围与证据边界}
 
@@ -711,7 +711,7 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
   \item 没有安装完整 CANN，没有配置 Ascend 驱动，没有生成或运行 kernel \code{.o}，没有在真实 NPU 上执行。
 \end{itemize}
 
-之所以仍然保留这一节，是因为它要回答的问题——“为什么需要多层 IR”“硬件细节何时进入 IR”——在读完 HIVM 层的真实 IR 与 PlanMemory 的官方断言后已经可以回答清楚。但本报告不把这段分析表述为一次完整的编译实验结果，也不声称获得了任何 NPU 运行数据。\cite{ascend-build,ascend-readme}
+保留这一节是因为，多层 IR 的必要性与硬件细节的引入时机，在读完 HIVM 层的真实 IR 与 PlanMemory 的官方断言后已经可以说明。但本报告不把这段分析表述为一次完整的编译实验结果，也不声称获得了任何 NPU 运行数据。\cite{ascend-build,ascend-readme}
 
 \clearpage
 \section{实验可复现性}
@@ -742,15 +742,15 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
 
 \section{结论}
 
-本文用一个包含函数、循环、分支、取模和运行库调用的 SysY 程序，走通了从源程序到可执行文件的全部环节，并在此基础上独立完成了两套手写实现。按引言提出的四个问题，可以得到以下结论。
+本文用一个包含函数、循环、分支、取模和运行库调用的 SysY 程序，完成了从源程序到可执行文件的全部环节，并在此基础上独立完成了两套手写实现。按引言提出的四个问题，可以得到以下结论。
 
-\textbf{关于四个阶段的分工。} 预处理只做文本替换，产物仍是源文本；前端把它变成 LLVM IR，其间经过词法、语法和语义分析；汇编器把汇编变成可重定位目标文件，此时地址未定、外部符号未解；链接器才把定义与引用配对并定下最终地址。本实验的 \code{example.o} 是 \code{ET\_REL}、入口地址为 0、含两个未定义符号，而链接后的文件六组测试全部通过，这一对比即为四者职责的直接证据。
+\textbf{四个阶段的分工。} 预处理只做文本替换，产物仍是源文本；前端把它变成 LLVM IR，其间经过词法、语法和语义分析；汇编器把汇编变成可重定位目标文件，此时地址未定、外部符号未解；链接器才把定义与引用配对并定下最终地址。本实验的 \code{example.o} 是 \code{ET\_REL}、入口地址为 0、含两个未定义符号，而链接后的文件六组测试全部通过，这一对比即为四者职责的直接证据。
 
-\textbf{关于 LLVM IR 到源代码的映射。} \code{-O0} 下 IR 与源程序接近一一对应：\code{alloca/load/store} 表示变量，\code{icmp}/\code{br} 表示比较与转移，\code{define/call/ret} 表示函数关系。\code{while} 和 \code{if} 都没有专用指令，它们由基本块、条件计算和 \code{br} 组合而成；循环由 \code{if.end} 跳回 \code{while.cond} 的回边体现。正因为这一映射是结构性的，才能在阅读自动生成结果之后独立重写出一份语义等价、命名更清晰的 \code{manual.ll}。
+\textbf{IR 到源代码的映射。} \code{-O0} 下 IR 与源程序接近一一对应：\code{alloca/load/store} 表示变量，\code{icmp}/\code{br} 表示比较与转移，\code{define/call/ret} 表示函数关系。\code{while} 和 \code{if} 都没有专用指令，它们由基本块、条件计算和 \code{br} 组合而成；循环由 \code{if.end} 跳回 \code{while.cond} 的回边体现。正因为这一映射是结构性的，才能在阅读自动生成结果之后独立重写出一份语义等价、命名更清晰的 \code{manual.ll}。
 
-\textbf{关于 RISC-V 的落地方式。} 参数与返回值共用 \code{a0}，\code{calc} 用 32 字节栈帧保存 \code{ra}、\code{s0} 和三个局部量，控制流落为比较加条件跳转的标签结构。值得记录的是，手写版与 Clang 自动版收敛到了\emph{相同的栈帧布局}，但在取模和 \code{main} 的栈帧大小上做了不同取舍——说明 ABI 约束是刚性的，而具体实现仍留有空间。
+\textbf{RISC-V 的落地方式。} 参数与返回值共用 \code{a0}，\code{calc} 用 32 字节栈帧保存 \code{ra}、\code{s0} 和三个局部量，控制流落为比较加条件跳转的标签结构。手写版与 Clang 自动版采用了\emph{相同的栈帧布局}，但在取模和 \code{main} 的帧大小上取舍不同，可见 ABI 约束是刚性的，具体实现仍有空间。
 
-\textbf{关于优化与抽象层次。} \code{-O2} 先改变值的表示（栈槽变 SSA，出现 32 个 \code{phi}），再重写算术（奇偶判断退化为变长左移，整个 \code{if/else} 消失），最后才由后端按目标能力决定是否向量化：x86-64 生成四 lane 运算和 \code{paddd}，RV64 因缺少 RVV 仍是标量循环。两种目标的汇编行数一增一减（87$\to$385 与 91$\to$56），说明行数不能作为优化效果的度量。MLIR 部分则从另一个方向回答了分层问题：HIVM 层把 GM/UB 地址空间和 \code{hivm.hir.load}/\code{vadd}/\code{store} 显式写入 IR，把原本隐含的硬件搬运策略变成可分析、可规划的信息，这正是“多层 IR”相对单一低层 IR 的价值所在。
+\textbf{优化与抽象层次。} \code{-O2} 先改变值的表示（栈槽变 SSA，出现 32 个 \code{phi}），再重写算术（奇偶判断退化为变长左移，整个 \code{if/else} 消失），最后才由后端按目标能力决定是否向量化：x86-64 生成四 lane 运算和 \code{paddd}，RV64 因缺少 RVV 仍是标量循环。两种目标的汇编行数一增一减（87$\to$385 与 91$\to$56），说明行数不能作为优化效果的度量。MLIR 部分则从另一个方向回答了分层问题：HIVM 层把 GM/UB 地址空间和 \code{hivm.hir.load}/\code{vadd}/\code{store} 显式写入 IR，把原本隐含的硬件搬运策略变成可分析、可规划的信息。
 
 \textbf{本实验的边界。} 所有前七节结论均基于本机真实产物，可用第 9 节的脚本逐阶段复现。第 8 节的 MLIR/Ascend 部分受限于环境（无 CMake、Ninja 1.10.1 低于要求的 1.12），为官方文档与上游测试用例的结构分析，没有运行 \code{bishengir-opt}，没有生成或运行 kernel，也没有在 Ascend NPU 上执行；报告中不对此作任何实测声明。
 
