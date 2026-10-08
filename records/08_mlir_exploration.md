@@ -10,7 +10,9 @@
 
 只读检查结果见 `mlir/logs/environment.log`：Ubuntu 22.04.5 x86_64，CMake 不存在，Ninja 为 1.10.1，Clang 为 14.0.0。AscendNPU-IR 官方构建要求 CMake ≥ 3.28、Ninja ≥ 1.12；当前至少两个关键构建条件不满足，且检查路径未发现用户级 `cmake`、`ninja` 或 `bishengir-opt`。按当时的任务停止条件，没有安装/升级系统工具，也没有克隆源码，选择 Stage 1B。
 
-> **后续更新（阶段 11）**：后经确认，两个缺口都可用 pip 在用户级 venv 内补齐而不改动系统，于是恢复了源码构建路线。截至 `records/11_ascend_build_precheck.md`，源码已按固定 commit 检出、CMake 配置已通过、`bishengir-opt` target 已确认生成，但**编译与 Pass 运行仍未执行**。本记录下文的所有 Ascend 结论仍属资料与源码分析。
+> **后续更新（阶段 11–13）**：后经确认，两个缺口都可用 pip 在用户级 venv 内补齐而不改动系统，于是恢复了源码构建路线。`bishengir-opt` 已在本机构建成功（`records/12_ascend_build.md`），并实跑了上游 Pass（`records/13_ascend_pass_runs.md`）：三个上游 `RUN` 命令连同其 FileCheck 断言全部通过，PlanMemory 与 InjectSync 的真实 Before/After 已保存于 `mlir/outputs/`。
+>
+> 因此**本记录下文的 Ascend 结论仍是资料与源码分析**（写于工具不可用时），但其中关于 PlanMemory 会把 `memref.alloc` 改写为带偏移 `pointer_cast` 的结构判断，已在阶段 13 得到实测确认。报告第 8 节现以阶段 13 的实测结果为准。
 
 ## VecAdd 主线
 
@@ -74,7 +76,8 @@ bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory -
 
 - VecAdd 主线：PASS
 - 官方资料核对：PASS
-- bishengir-opt 构建：配置 PASS，编译未执行（详见 `records/11_ascend_build_precheck.md`）
+- bishengir-opt 构建：PASS（阶段 12，见 `records/12_ascend_build.md`）
+- PlanMemory / Sync 实跑：PASS（阶段 13，见 `records/13_ascend_pass_runs.md`）
 - PlanMemory 实验：ANALYSIS-ONLY
 - Sync 实验：SKIPPED
 - CANN：NOT ATTEMPTED

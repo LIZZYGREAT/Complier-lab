@@ -954,19 +954,31 @@ TU/FandolSong-Regular(0)/m/n/10.95 ，|  汇 总 表 为 \TU/lmtt/m/n/10.95 fina
 ion.md\TU/FandolSong-Regular(0)/m/n/10.95 ，|  完 整 命 令 输 出 见
  []
 
-[12] [13] [14] [15]
-Underfull \hbox (badness 2922) in paragraph at lines 713--714
-[]\TU/FandolSong-Regular(0)/m/n/10.95 本 节 的 \TU/FandolSong-Regular(0)/m/it/10.9
-5 真 实 文 件 \TU/FandolSong-Regular(0)/m/n/10.95 是 \TU/lmtt/m/n/10.95 mlir/sources
-/vecadd\_hivm.mlir |\TU/FandolSong-Regular(0)/m/n/10.95 （官 方 \TU/lmr/m/n/10.95 
-16$\OMS/cmsy/m/n/10.95 ^^B$\TU/lmtt/m/n/10.95 i16 \TU/lmr/m/n/10.95 VecAdd\TU/F
-andolSong-Regular(0)/m/n/10.95 ）|  与
+[12] [13] [14] [15] [16]
+Underfull \hbox (badness 10000) in paragraph at lines 773--774
+[]\TU/FandolSong-Regular(0)/m/n/10.95 构 建 过 程 中 对 上 游 源 码 打 了 一 处 必 要 的 链 接 补 丁
+：| \TU/lmtt/m/n/10.95 BiShengIRHIVMCLib \TU/FandolSong-Regular(0)/m/n/10.95 与
  []
 
-[16] [17
 
-] [18] (report.aux)
+Underfull \hbox (badness 10000) in paragraph at lines 773--774
+\TU/lmtt/m/n/10.95 BiShengIRHIVMCLibA3/A5 \TU/FandolSong-Regular(0)/m/n/10.95 之
+ 间 存 在 真 实 的 静 态 库 循 环  |（\TU/lmr/m/n/10.95 A3/A5 \TU/FandolSong-Regular(0)/m/n
+/10.95 调 用 前 者 的
+ []
+
+[17] [18]
+Underfull \hbox (badness 2781) in paragraph at lines 810--811
+[]\TU/FandolSong-Regular(0)/m/n/10.95 第 \TU/lmr/m/n/10.95 11 |\TU/FandolSong-Re
+gular(0)/m/n/10.95 –| \TU/lmr/m/n/10.95 13 \TU/FandolSong-Regular(0)/m/n/10.95 
+个 脚 本 针 对 进 阶 部 分，|  依 赖 仓 库 外 的 源 码 与 工 具 链  |（\TU/lmtt/m/n/10.95 third\_party
+/ \TU/FandolSong-Regular(0)/m/n/10.95 与
+ []
+
+[19
+
+] [20] [21] (report.aux)
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 9E7EFBE135CC8E76D2FA751AB2C157DE;3021.
+(rerunfilecheck)             Checksum: A310769B5C591CA698A03D5BF9EF4EF1;3559.
  )
-Output written on report.xdv (18 pages, 425264 bytes).
+Output written on report.xdv (21 pages, 474344 bytes).
