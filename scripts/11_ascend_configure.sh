@@ -45,7 +45,10 @@ printf 'build : %s\n\n' "$BUILD_DIR"
 #        必需。bishengir/lib/Conversion/CMakeLists.txt 会无条件加入
 #        TritonAscendGPUToLLVM，而它引用的 LLVM_EXTERNAL_TRITON_SOURCE_DIR
 #        只在 triton 打开时才被赋值；triton 源码在仓库内 bishengir/triton/。
-#   BISHENGIR_BUILD_HIVMC=OFF      跳过硬件编译器后端，本任务不需要
+#   BISHENGIR_BUILD_HIVMC=ON       必须为 ON。设成 OFF 看似能跳过用不到的硬件
+#        后端，但 BiShengIRCompileMain.cpp 无条件引用 hivmcCanonicalizePath、
+#        runHIVMCCompileA3/A5，链接 bishengir-opt 时会报 undefined reference。
+#        上游 build.sh 默认也是 ON。
 #   LLVM_USE_LINKER=gold           无 lld 时用 gold，静态链接更省内存
 #   LLVM_PARALLEL_LINK_JOBS=1      限制链接并行，避免内存峰值
 cmake "$LLVM_SRC/llvm" -G Ninja -B "$BUILD_DIR" \
@@ -67,7 +70,7 @@ cmake "$LLVM_SRC/llvm" -G Ninja -B "$BUILD_DIR" \
     -DLLVM_BSPUB_DAVINCI_BISHENGIR_A5_NPUIR=ON \
     -DBISHENGIR_ENABLE_PM_CL_OPTIONS=ON \
     -DBISHENGIR_ENABLE_TRITON_COMPILE=ON \
-    -DBISHENGIR_BUILD_HIVMC=OFF \
+    -DBISHENGIR_BUILD_HIVMC=ON \
     -DBISHENGIR_BUILD_TEMPLATE=OFF \
     -DSHMEM_BUILD_TEMPLATE=OFF \
     -DMLIR_ENABLE_BINDINGS_PYTHON=OFF
@@ -80,15 +83,15 @@ CMDS_FILE="$(mktemp)"
 trap 'rm -f "$TARGETS_FILE" "$CMDS_FILE"' EXIT
 ninja -C "$BUILD_DIR" -t targets all >"$TARGETS_FILE" 2>/dev/null
 
-grep -oE '^(bishengir-opt|bishengir-compile|bishengir-translate|mlir-opt):' \
+grep -oE '^(bishengir-opt|bishengir-compile|bishengir-translate|hivmc|mlir-opt):' \
     "$TARGETS_FILE" | sort -u
 
 if ! grep -q '^bishengir-opt:' "$TARGETS_FILE"; then
     printf 'ERROR: bishengir-opt target 未生成\n' >&2
     exit 1
 fi
-if grep -q '^hivmc:' "$TARGETS_FILE"; then
-    printf 'ERROR: hivmc 意外出现，BISHENGIR_BUILD_HIVMC=OFF 未生效\n' >&2
+if ! grep -q '^hivmc:' "$TARGETS_FILE"; then
+    printf 'ERROR: hivmc target 缺失，BISHENGIR_BUILD_HIVMC=ON 未生效（会导致链接失败）\n' >&2
     exit 1
 fi
 
@@ -97,7 +100,7 @@ ninja -C "$BUILD_DIR" -t commands bishengir-opt >"$CMDS_FILE" 2>/dev/null
 printf '\n[Scale estimate] 编译单元数（未执行）：%s\n' \
     "$(grep -cE 'clang\+\+.* -c ' "$CMDS_FILE" || true)"
 
-printf '\n如果 hivmc 未出现且 bishengir-opt 已列出，则配置验证通过。\n'
+printf '\n若上方同时列出 bishengir-opt 与 hivmc，则配置验证通过。\n'
 printf '注意：本脚本只做配置，不编译。编译请另行执行：\n'
 printf '  ninja -C %s bishengir-opt -j 6\n' "$BUILD_DIR"
 printf '\nStage 11 AscendNPU-IR configure: PASS\n'

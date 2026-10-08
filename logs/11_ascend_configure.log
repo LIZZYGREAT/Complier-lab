@@ -153,7 +153,7 @@ This warning is for project developers.  Use -Wno-author or -Wno-policy to
 suppress it.
 
 -- BISHENGIR version: 2.0.0
--- BISHENGIR build date: 2026-10-08
+-- BISHENGIR build date: 2026-10-09
 -- HIVMC version: 2.0.0
 CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/bishengir/triton/CMakeLists.txt:6 (cmake_policy):
   The OLD behavior for policy CMP0116 will be removed from a future version
@@ -207,19 +207,20 @@ LLVM_MAIN_SRC_DIR: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/
 -- Performing Test HAVE_POSIX_REGEX -- success
 -- Performing Test HAVE_STEADY_CLOCK -- success
 -- Performing Test HAVE_PTHREAD_AFFINITY -- success
--- Configuring done (21.5s)
--- Generating done (21.5s)
+-- Configuring done (20.9s)
+-- Generating done (21.6s)
 -- Build files have been written to: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build
 
 [Target check]
 bishengir-compile:
 bishengir-opt:
 bishengir-translate:
+hivmc:
 mlir-opt:
 
-[Scale estimate] 编译单元数（未执行）：3123
+[Scale estimate] 编译单元数（未执行）：3131
 
-如果 hivmc 未出现且 bishengir-opt 已列出，则配置验证通过。
+若上方同时列出 bishengir-opt 与 hivmc，则配置验证通过。
 注意：本脚本只做配置，不编译。编译请另行执行：
   ninja -C /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build bishengir-opt -j 6
 
