@@ -38,6 +38,8 @@
 | `scripts/10_build_report.sh` | Stage 10 | 使用隔离的临时引擎/缓存构建 PDF | 是 |
 | `logs/10_latex_compile.log` | Stage 10 | Tectonic/LaTeX 编译日志 | 按需引用 |
 | `records/00`–`10` | 各阶段记录 | 过程、结果、验收与限制 | 是 |
+| `records/errors_and_fixes.md` | 本实验 | 错误、原因、修改与复验留档 | 按需引用 |
 | `scripts/00`–`10` | 本实验脚本 | 重现工具检查、构建和验证 | 是 |
 | `logs/00`–`10` | 阶段实际 stdout/stderr | 过程证据 | 按需引用 |
 | `records/FINAL_HANDOFF.md` | Stage 10 | 完成状态、提交和限制汇总 | 是 |
+| `docs/` | 课程下发的作业要求与执行方案 | 任务依据与验收口径 | 否 |
