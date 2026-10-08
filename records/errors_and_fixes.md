@@ -95,6 +95,86 @@ curl: (56) OpenSSL SSL_read: error:0A000126:SSL routines::unexpected eof while r
 
 ---
 
+## 2026-10-08 / 阶段 11：CMake 配置找不到 Triton 源码
+
+### 问题
+
+首次执行 AscendNPU-IR 的 CMake 配置验证时，配置阶段报错中止。
+
+### 原始报错
+
+```text
+CMake Error at cmake/modules/AddLLVM.cmake:568 (add_library):
+  Cannot find source file:
+    /lib/Conversion/TritonGPUToLLVM/MemoryOpToLLVM.cpp
+```
+
+路径前缀为空，说明变量 `LLVM_EXTERNAL_TRITON_SOURCE_DIR` 未被赋值。
+
+### 原因
+
+两层原因叠加：
+
+1. `bishengir/lib/Conversion/CMakeLists.txt` **无条件**加入 `TritonAscendGPUToLLVM` 子目录，而该库的源文件列表引用了 `${LLVM_EXTERNAL_TRITON_SOURCE_DIR}/lib/...`。
+2. `LLVM_EXTERNAL_TRITON_SOURCE_DIR` 只在顶层 `CMakeLists.txt` 的 `if(BISHENGIR_ENABLE_TRITON_COMPILE)` 分支内才被设置。上游 `build.sh` 的 `BUILD_TRITON` 默认为 `ON`，会自动带上 `-DBISHENGIR_ENABLE_TRITON_COMPILE=ON`；手写 cmake 命令时漏掉了该参数，于是变量为空。
+
+同时确认 `--disable-build-triton` 不是可行退路：即便关掉 triton，那个子目录仍会被无条件加入，错误依旧。
+
+### 修改
+
+补上 `-DBISHENGIR_ENABLE_TRITON_COMPILE=ON`，并确认 triton 源码**无需额外下载**——它就在仓库内 `bishengir/triton/`（9.4 MB），因为 `BISHENGIR_SRC_DIR = <repo>/bishengir`，所以 `${BISHENGIR_SRC_DIR}/triton` 指向正确位置。
+
+### 重新执行
+
+删除半途失败、缓存不可信的 `build/` 目录后重新配置。
+
+### 最终结果
+
+配置一次通过（`Configuring done 107.9s`、`Generating done 24.5s`、exit 0），`bishengir-opt` 等 target 确认生成。修正后的完整命令已固化为 `scripts/11_ascend_configure.sh`。
+
+---
+
+## 2026-10-08 / 阶段 11：配置脚本的 target 检查误报失败
+
+### 问题
+
+`scripts/11_ascend_configure.sh` 首次运行时，CMake 配置已经成功（`Configuring done` / `Generating done`），同一脚本上方也正确打印出了 `bishengir-opt:`，但脚本随后判定「bishengir-opt target 未生成」并以非零码退出。
+
+### 原始报错
+
+```text
+[Target check]
+bishengir-compile:
+bishengir-opt:
+bishengir-translate:
+mlir-opt:
+ERROR: bishengir-opt target 未生成
+```
+
+### 原因
+
+脚本自身的缺陷，与上游无关。原写法是：
+
+```bash
+if ninja -C "$BUILD_DIR" -t targets all 2>/dev/null | grep -q '^bishengir-opt:'; then
+```
+
+在 `set -euo pipefail` 下，`grep -q` 一旦命中就立即退出并关闭管道，`ninja` 因此收到 SIGPIPE 并返回非零；`pipefail` 让整条管道的状态取到这个非零值，于是 `if` 判为假。命中越早，误报越稳定。
+
+### 修改
+
+不再对管道使用 `grep -q`：先把 `ninja -t targets all` 的输出落到临时文件，再对文件匹配；同时把「hivmc 不应出现」也做成显式校验，并在脚本退出时清理临时文件。
+
+### 重新执行
+
+`bash scripts/11_ascend_configure.sh` 端到端通过（exit 0），输出 target 列表、编译单元数 3123，并以 `Stage 11 AscendNPU-IR configure: PASS` 收尾。完整输出留存于 `logs/11_ascend_configure.log`。
+
+### 最终结果
+
+脚本可作为后续复现配置的入口。这个坑本身也值得记下来：在 `pipefail` 下用 `grep -q` 提前退出会污染管道状态。
+
+---
+
 ## 说明
 
 阶段 1–7、9 的日志与记录中「异常」均为「无」，即在这些阶段未发生需要修复的错误，因此不在此处补记条目。所有阶段记录见 `records/00_environment.md` 至 `records/10_report.md`。

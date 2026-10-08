@@ -1,0 +1,226 @@
+Stage 11: AscendNPU-IR CMake configure check (no compilation)
+cmake : /home/lenovo/projects/Compiler-Labs/.venv-ascendnpu/bin/cmake  cmake version 4.4.4
+ninja : /home/lenovo/projects/Compiler-Labs/.venv-ascendnpu/bin/ninja  1.13.2.git.kitware.jobserver-pipe-1
+llvm  : /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/llvm
+repo  : /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir
+build : /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build
+
+CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/cmake/Modules/CMakePolicy.cmake:6 (cmake_policy):
+  The OLD behavior for policy CMP0114 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+Call Stack (most recent call first):
+  CMakeLists.txt:6 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/cmake/Modules/CMakePolicy.cmake:11 (cmake_policy):
+  The OLD behavior for policy CMP0116 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+Call Stack (most recent call first):
+  CMakeLists.txt:6 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- bolt project is disabled
+-- clang project is disabled
+-- clang-tools-extra project is disabled
+-- compiler-rt project is disabled
+-- cross-project-tests project is disabled
+-- libc project is disabled
+-- libclc project is disabled
+-- lld project is disabled
+-- lldb project is disabled
+-- mlir project is enabled
+-- openmp project is disabled
+-- polly project is disabled
+-- pstl project is disabled
+-- flang project is disabled
+-- bishengir project is enabled
+-- Could NOT find LibEdit (missing: LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES) 
+-- LLVM host triple: x86_64-unknown-linux-gnu
+-- Native target architecture is X86
+-- Threads enabled.
+-- Doxygen disabled.
+-- Ninja version: 1.13.2.git.kitware.jobserver-pipe-1
+-- Could NOT find OCaml (missing: OCAMLFIND OCAML_VERSION OCAML_STDLIB_PATH) 
+-- Could NOT find OCaml (missing: OCAMLFIND OCAML_VERSION OCAML_STDLIB_PATH) 
+-- OCaml bindings disabled.
+-- LLVM default target triple: x86_64-unknown-linux-gnu
+-- Building with -fPIC
+CMake Warning (policy) at cmake/modules/HandleLLVMOptions.cmake:883 (CHECK_C_SOURCE_COMPILES):
+  Policy CMP0219 is not set: Macro invocations preserve backslashes in
+  arguments.  Run "cmake --help-policy CMP0219" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  Command "CHECK_C_SOURCE_COMPILES" called with arguments containing
+  backslashes.
+
+  Since the policy is not set, backslashes in the arguments:
+
+   "// \\\n//\nint main(void) {return 0;}"
+
+  will be interpreted as escape sequences for compatibility.
+
+  Set the policy to NEW to instead pass
+
+   "// \\\\\\n//\\nint main(void) {return 0;}"
+
+  so that argument parsing will preserve the original values.
+Call Stack (most recent call first):
+  CMakeLists.txt:1008 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  CMakeLists.txt:1225 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  CMakeLists.txt:1225 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+-- Targeting X86
+CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/cmake/Modules/CMakePolicy.cmake:6 (cmake_policy):
+  The OLD behavior for policy CMP0114 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+Call Stack (most recent call first):
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/mlir/CMakeLists.txt:19 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/cmake/Modules/CMakePolicy.cmake:11 (cmake_policy):
+  The OLD behavior for policy CMP0116 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+Call Stack (most recent call first):
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/mlir/CMakeLists.txt:19 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/CMakeLists.txt:121 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/CMakeLists.txt:121 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+-- BISHENGIR version: 2.0.0
+-- BISHENGIR build date: 2026-10-08
+-- HIVMC version: 2.0.0
+CMake Warning (deprecated) at /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/bishengir/triton/CMakeLists.txt:6 (cmake_policy):
+  The OLD behavior for policy CMP0116 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- Could not find ccache. Consider installing ccache to speed up compilation.
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/bishengir/triton/CMakeLists.txt:125 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+CMake Warning (policy) at cmake/modules/AddLLVM.cmake:2593 (if):
+  Policy CMP0218 is not set: The CMAKE_WARN_DEPRECATED and
+  CMAKE_ERROR_DEPRECATED variables are ignored.  Run "cmake --help-policy
+  CMP0218" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+Call Stack (most recent call first):
+  cmake/modules/TableGen.cmake:13 (get_bisheng_definitions)
+  /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/bishengir/triton/CMakeLists.txt:125 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+-- ENABLE_CPU_TRACE_INTRINSIC Value: OFF
+-- No CMAKE_SYSROOT specified. Omitting sysroot flag.
+-- ENABLE_SYCL Value: OFF
+generate_vcs_version_script: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/llvm/cmake/modules/GenerateVersionFromVCS.cmake
+bishengir_src_dir: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/bishengir
+vcs_version_inc: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build/tools/bishengir/bishengir/lib/Tools/Version/VCSVersion.inc
+bishengir_vc: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/.git/logs/HEAD
+LLVM_MAIN_SRC_DIR: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/llvm
+-- Registering ExampleIRTransforms as a pass plugin (static build: OFF)
+-- Registering Bye as a pass plugin (static build: OFF)
+-- Failed to find LLVM FileCheck
+-- Google Benchmark version: v0.0.0, normalized to 0.0.0
+-- Enabling additional flags: -DINCLUDE_DIRECTORIES=/home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/third-party/llvm-project/third-party/benchmark/include
+-- Performing Test HAVE_THREAD_SAFETY_ATTRIBUTES -- success
+-- Performing Test HAVE_GNU_POSIX_REGEX -- failed to compile
+-- Performing Test HAVE_POSIX_REGEX -- success
+-- Performing Test HAVE_STEADY_CLOCK -- success
+-- Performing Test HAVE_PTHREAD_AFFINITY -- success
+-- Configuring done (21.5s)
+-- Generating done (21.5s)
+-- Build files have been written to: /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build
+
+[Target check]
+bishengir-compile:
+bishengir-opt:
+bishengir-translate:
+mlir-opt:
+
+[Scale estimate] 编译单元数（未执行）：3123
+
+如果 hivmc 未出现且 bishengir-opt 已列出，则配置验证通过。
+注意：本脚本只做配置，不编译。编译请另行执行：
+  ninja -C /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build bishengir-opt -j 6
+
+Stage 11 AscendNPU-IR configure: PASS

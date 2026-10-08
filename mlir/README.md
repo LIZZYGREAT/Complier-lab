@@ -12,9 +12,13 @@
 
 ## 执行边界
 
-本机没有 CMake，Ninja 版本为 1.10.1（官方要求至少 1.12），因此没有克隆/构建 AscendNPU-IR，也没有运行 `bishengir-opt`。PlanMemory 为源码分析，未生成 `outputs/plan_memory_before.mlir` / `plan_memory_after.mlir`。本轮跳过独立 Sync 用例；同步仅在 VecAdd 与官方总体流程的层次说明中提及。
+系统既有的 CMake 缺失、Ninja 为 1.10.1（官方要求至少 1.12），因此**没有用系统工具链构建**。作为替代，CMake 4.4.4 与 Ninja 1.13.2 已通过 pip 安装在仓库外的用户级 venv `.venv-ascendnpu` 中，AscendNPU-IR 源码与其 LLVM 19.1.7 子模块也已按固定 commit 检出于 `../third_party/ascendnpu-ir`。
 
-没有安装完整 CANN、配置驱动或使用 Ascend NPU；没有生成或运行 kernel `.o`。官方 VecAdd 是源码材料，不代表本机编译结果。
+截至 `records/11_ascend_build_precheck.md`，**CMake 配置阶段已验证通过**，`bishengir-opt` target 确认生成，编译规模量化为 3123 个编译单元；但**尚未执行编译**，也没有运行任何 Pass。
+
+因此 PlanMemory 目前仍是源码分析，`outputs/` 下没有 `plan_memory_before.mlir` / `plan_memory_after.mlir`。独立 Sync 用例跳过；同步仅在 VecAdd 与官方总体流程的层次说明中提及。
+
+没有安装完整 CANN、配置驱动或使用 Ascend NPU；没有生成或运行 kernel `.o`。官方 VecAdd 是源码材料，不代表本机编译结果。已确认这些都不是本任务的必需项——CANN 只在"编 kernel `.o` 并上板执行"时才需要。
 
 ## 文件入口
 
@@ -32,7 +36,7 @@
 | --- | --- |
 | VecAdd 主线 | PASS |
 | 官方资料和 Test Case 核对 | PASS |
-| `bishengir-opt` 构建 | SKIPPED（前置工具版本不满足） |
+| `bishengir-opt` 构建 | 配置已通过，编译未执行（见 `records/11_ascend_build_precheck.md`） |
 | PlanMemory 实验 | ANALYSIS-ONLY |
 | Sync 实验 | SKIPPED |
 | CANN / NPU 上板 | NOT ATTEMPTED |

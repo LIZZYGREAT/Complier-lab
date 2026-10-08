@@ -8,7 +8,9 @@
 
 ## Stage 0：环境检查和构建决策
 
-只读检查结果见 `mlir/logs/environment.log`：Ubuntu 22.04.5 x86_64，CMake 不存在，Ninja 为 1.10.1，Clang 为 14.0.0。AscendNPU-IR 官方构建要求 CMake ≥ 3.28、Ninja ≥ 1.12；当前至少两个关键构建条件不满足，且检查路径未发现用户级 `cmake`、`ninja` 或 `bishengir-opt`。按任务停止条件，没有安装/升级系统工具，也没有克隆源码，选择 Stage 1B。
+只读检查结果见 `mlir/logs/environment.log`：Ubuntu 22.04.5 x86_64，CMake 不存在，Ninja 为 1.10.1，Clang 为 14.0.0。AscendNPU-IR 官方构建要求 CMake ≥ 3.28、Ninja ≥ 1.12；当前至少两个关键构建条件不满足，且检查路径未发现用户级 `cmake`、`ninja` 或 `bishengir-opt`。按当时的任务停止条件，没有安装/升级系统工具，也没有克隆源码，选择 Stage 1B。
+
+> **后续更新（阶段 11）**：后经确认，两个缺口都可用 pip 在用户级 venv 内补齐而不改动系统，于是恢复了源码构建路线。截至 `records/11_ascend_build_precheck.md`，源码已按固定 commit 检出、CMake 配置已通过、`bishengir-opt` target 已确认生成，但**编译与 Pass 运行仍未执行**。本记录下文的所有 Ascend 结论仍属资料与源码分析。
 
 ## VecAdd 主线
 
@@ -72,7 +74,7 @@ bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory -
 
 - VecAdd 主线：PASS
 - 官方资料核对：PASS
-- bishengir-opt 构建：SKIPPED（CMake 缺失、Ninja 版本低于最低要求）
+- bishengir-opt 构建：配置 PASS，编译未执行（详见 `records/11_ascend_build_precheck.md`）
 - PlanMemory 实验：ANALYSIS-ONLY
 - Sync 实验：SKIPPED
 - CANN：NOT ATTEMPTED
