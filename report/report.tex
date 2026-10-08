@@ -67,7 +67,7 @@
 \maketitle
 
 \begin{abstract}
-本文以一个含函数、while、if/else、取模和整数输入输出的 SysY 风格程序为贯穿案例，使用 Clang 14 观察预处理、词法/语法/语义分析与 IR 生成、x86-64 汇编、ELF 目标文件和显式链接的完整过程，并通过实际 \code{readelf} 输出核对节区、符号与重定位项。随后根据源程序语义独立手写 LLVM IR 与 RV64 汇编，对照控制流图与栈帧布局逐条说明设计意图，并分别链接运行库验证。六组输入在宿主机 reference、手写 LLVM 和 QEMU/RISC-V 上均得到 1、5、8、16、21、85。优化对比显示，Clang -O2 消除了该模块中的 alloca/load/store，并在 x86-64 上生成四 lane 向量运算；RV64 目标保留标量循环并内联 calc。最后依据 LLVM 与 AscendNPU-IR 官方材料分析 VecAdd 的多层 MLIR lowering，并解读官方 PlanMemory 测试用例；该部分为资料与源码分析，没有运行本机 Ascend 编译器或设备。全部实验由脚本驱动，可逐阶段复现。
+本文以一个含函数、while、if/else、取模和整数输入输出的 SysY 风格程序为贯穿案例，使用 Clang 14 观察预处理、词法/语法/语义分析与 IR 生成、x86-64 汇编、ELF 目标文件和显式链接的完整过程，并通过实际 \code{readelf} 输出核对节区、符号与重定位项。随后根据源程序语义独立手写 LLVM IR 与 RV64 汇编，对照控制流图与栈帧布局逐条说明设计意图，并分别链接运行库验证。六组输入在宿主机 reference、手写 LLVM 和 QEMU/RISC-V 上均得到 1、5、8、16、21、85。优化对比显示，Clang -O2 消除了该模块中的 alloca/load/store，并在 x86-64 上生成四 lane 向量运算；RV64 目标保留标量循环并内联 calc。进阶部分从源码构建了 AscendNPU-IR 的 bishengir-opt，逐字执行上游自带的 RUN 命令并用其 CHECK 断言做 FileCheck，PlanMemory 与 InjectSync 两组用例均通过，并保存了真实 Before/After；未安装 CANN 或使用 NPU 设备，该范围不属本任务所需。全部实验由脚本驱动，可逐阶段复现。
 
 \noindent\textbf{关键词：} 编译器；Clang；LLVM IR；RISC-V；ABI；MLIR；lowering
 \end{abstract}
@@ -646,7 +646,8 @@ MLIR 以 operation/value/block/region 和 dialect 描述不同抽象层。多层
     \draw[flow] (hfusion) -- (hivm);
     \draw[flow] (hivm) -- (lower);
   \end{tikzpicture}
-  \caption{VecAdd 的概念 lowering 主线；本次逐行核对的官方文件位于 HIVM 层}
+  \caption{VecAdd 的概念 lowering 主线；本次逐行核对与实跑的实物位于 HIVM 层}
+  \label{fig:lowering}
 \end{figure}
 
 \begin{table}[H]
@@ -699,24 +700,83 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
 // CHECK: %[[CONST0:.*]] = arith.constant 0 : i64
 // CHECK: {{.*}} = hivm.hir.pointer_cast(%[[CONST0]])
 \end{lstlisting}
-\code{CHECK-NOT} 断言输出不再包含 \code{memref.alloc()}，随后的 \code{CHECK} 要求这些 buffer 被改写为引用同一常量的 \code{pointer_cast}。可见该 Pass 不改变计算语义，只把抽象的 UB 分配请求落实为各硬件缓冲区中的具体地址。
+\code{RUN} 行中的 \code{-hacc-append-device-spec=target=Ascend910B1} 是必需项：PlanMemory 要先知道目标芯片规格，才能应用相应的对齐与容量约束。该文件还有第二条 \code{RUN}，以 \code{=largest-first} 选择另一种分配策略并用 \code{CHECK-REORDER} 前缀检查。
 
-\code{RUN} 行中的 \code{-hacc-append-device-spec=target=Ascend910B1} 是必需项：PlanMemory 要先知道目标芯片规格，才能应用相应的对齐与容量约束。该文件还有第二条 \code{RUN}，以 \code{=largest-first} 选择另一种分配策略并用 \code{CHECK-REORDER} 前缀检查；本报告只讨论默认策略那条。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
+\subsection{实测：PlanMemory 把 alloc 改写为 pointer\_cast}
 
-\subsection{观察范围与证据边界}
+本实验从源码构建了上游 \code{bishengir-opt}（见本节的"构建与验证方式"），并逐字执行上面两条 \code{RUN} 命令，把输出交给\emph{上游自己的} \code{CHECK} 断言做 FileCheck：默认策略与 \code{largest-first} 两条均为 PASS。
 
-第 8 节与前七节的性质不同，必须明确区分“本机真实运行得到”和“依据官方材料分析得到”两类内容。
+对用例 \code{test\_mem\_allocate\_basic} 单独保存的 Before/After 如下。输入含四个 16$\times$16$\times$16$\times$\code{f16} 的 UB 临时 buffer，共 32 KiB。
 
-本机环境检查的实际结果是：系统中没有 CMake，Ninja 版本为 1.10.1，低于 AscendNPU-IR 官方构建要求的 1.12。按任务书中“环境不满足即退化为资料与源码分析”的约定，本实验没有克隆或构建 \code{bishengir-opt}，也没有运行任何 HIVM Pass。因此：
+\begin{table}[H]
+  \centering\small
+  \caption{PlanMemory 在该用例上的实测变化}
+  \begin{tabular}{P{4.4cm}rr}
+    \toprule
+    指令计数 & Before & After \\
+    \midrule
+    \code{memref.alloc()} & 4 & 0 \\
+    \code{hivm.hir.pointer\_cast} & 0 & 4 \\
+    \code{hivm.hir.load}/\code{vadd}/\code{store} & 5 & 5 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\begin{itemize}
-  \item 本节的\emph{真实文件}是 \code{mlir/sources/vecadd\_hivm.mlir}（官方 16$\times$\code{i16} VecAdd）与 \code{mlir/sources/selected\_tests/plan\_memory\_input.mlir}（官方 \code{plan-memory.mlir} 的相关片段），二者来自上游仓库。
-  \item 其中的 \code{RUN}/\code{CHECK} 是\emph{上游测试的期望}，不是本机产生的输出；\code{mlir/outputs/} 目录下没有 Before/After 文件，因为 Pass 未被执行。
-  \item 层次图（Arith/Tensor $\to$ HFusion $\to$ HIVM $\to$ HACC/LLVM）是根据官方架构资料整理的概念主线；可以逐行核对的实物只到 HIVM 层。
-  \item 没有安装完整 CANN，没有配置 Ascend 驱动，没有生成或运行 kernel \code{.o}，没有在真实 NPU 上执行。
-\end{itemize}
+四个 \code{memref.alloc()} 被逐个改写为引用同一常量 \code{\%c0\_i64 = arith.constant 0 : i64} 的 \code{pointer\_cast}，偏移均为 0；而计算指令一条未改。这与此前只能引用文档的推断一致，但现在有本机产出的 Before/After 为证（\code{mlir/outputs/plan\_memory\_*.mlir}）。
 
-保留这一节是因为，多层 IR 的必要性与硬件细节的引入时机，在读完 HIVM 层的真实 IR 与 PlanMemory 的官方断言后已经可以说明。但本报告不把这段分析表述为一次完整的编译实验结果，也不声称获得了任何 NPU 运行数据。\cite{ascend-build,ascend-readme}
+Pass 同时把目标芯片规格写入了模块属性，这是"硬件细节何时进入 IR"的具体形态：
+
+\begin{lstlisting}
+module attributes {
+  dlti.target_system_spec = #dlti.target_system_spec<"NPU" :
+    #hacc.target_device_spec<
+      #dlti.dl_entry<"UB_SIZE", 1572864 : i32>,      // 1.5 MiB
+      #dlti.dl_entry<"L1_SIZE", 4194304 : i32>,      // 4 MiB
+      #dlti.dl_entry<"L0C_SIZE", 1048576 : i32>,
+      #dlti.dl_entry<"UB_ALIGN_SIZE", 256 : i32>,
+      #dlti.dl_entry<"AI_CORE_COUNT", 24 : i32>,
+      #dlti.dl_entry<"VECTOR_CORE_COUNT", 48 : i32>, ...>>,
+  hacc.target = #hacc.target<"Ascend910B1">
+}
+\end{lstlisting}
+
+关于偏移为 0：该用例四个 buffer 共 32 KiB，远小于芯片 UB 容量（1572864 字节），因此都落在偏移 0 处。不能把单个用例的 offset-0 期望推广到任意程序——一般情况仍需满足生命周期、别名、对齐和硬件复用规则。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
+
+\subsection{实测：InjectSync 注入流水线同步}
+
+上游 \code{inject-sync.mlir} 中的 \code{test\_mem\_injct\_sync\_basic} 用例，源程序只有 \code{load}、\code{vadd}、\code{store} 三条计算指令，不含任何同步。逐字执行其 \code{RUN} 命令（\code{-hivm-inject-sync -hivm-lower-multi-buffer-counter}）后，注入结果如下：
+
+\begin{lstlisting}
+hivm.hir.load ins(%arg0 : ...<gm>) outs(%0 : ...<ub>)
+hivm.hir.set_flag[<PIPE_MTE2>, <PIPE_V>, <EVENT_ID0>]
+hivm.hir.wait_flag[<PIPE_MTE2>, <PIPE_V>, <EVENT_ID0>]
+hivm.hir.vadd ins(%0, %2 : ...) outs(%0 : ...)
+hivm.hir.set_flag[<PIPE_V>, <PIPE_MTE3>, <EVENT_ID0>]
+hivm.hir.wait_flag[<PIPE_V>, <PIPE_MTE3>, <EVENT_ID0>]
+hivm.hir.store ins(%0 : ...<ub>) outs(%arg1 : ...<gm>)
+hivm.hir.pipe_barrier[<PIPE_ALL>]
+\end{lstlisting}
+
+这段输出把"NPU 为什么需要显式同步"讲得很具体：数据搬运走 MTE2/MTE3 流水，计算走 V（向量）流水，二者是\emph{不同的硬件流水线}，源代码里的先后书写顺序并不保证执行完成。Pass 因此插入 MTE2$\to$V（搬入后才能算）与 V$\to$MTE3（算完才能写回）两组 flag，并在函数末尾补一条 \code{PIPE\_ALL} barrier。计数上，Before 为 0 条同步指令，After 为 2 条 \code{set\_flag}、2 条 \code{wait\_flag} 和 1 条 \code{pipe\_barrier}（\code{mlir/outputs/sync\_*.mlir}）。
+
+\subsection{构建与验证方式}
+
+本节的 Ascend 结果全部来自本机运行，验证方式是执行上游测试文件自带的 \code{RUN} 命令，再用上游的 \code{CHECK} 断言做 FileCheck——即用上游自己的验收标准检验本机构建。
+
+工具链不在系统内：系统 CMake 缺失、Ninja 为 1.10.1（官方要求至少 1.12），因此 CMake 4.4.4 与 Ninja 1.13.2 由 pip 安装在仓库外的用户级 venv 中，AscendNPU-IR 及其 LLVM 19.1.7 子模块按固定 commit 检出于 \code{third\_party/}，未改动系统环境。构建产物自报版本为：
+
+\begin{lstlisting}
+bishengir-opt 2.0.0 (gitcode.com/Ascend/ascendnpu-ir 2ac1b376da1d)
+llvm 19.1.7 06913395ef8a   Release build
+\end{lstlisting}
+
+构建过程中对上游源码打了一处必要的链接补丁：\code{BiShengIRHIVMCLib} 与 \code{BiShengIRHIVMCLibA3/A5} 之间存在真实的静态库循环（A3/A5 调用前者的 \code{setSanitizerAddrArgName}，前者又调用后者的 \code{runHIVMCCompileA3/A5}），静态库单遍扫描无法解析。补丁用 CMake 的 \code{\$<LINK\_GROUP:RESCAN,...>} 让链接器对这组库重复扫描。它只影响 \code{bishengir-opt} 的链接参数，不改变任何 Pass 的行为——三个上游 \code{RUN} 命令连同其断言全部通过，即为此提供了佐证。补丁全文见 \code{scripts/patches/}。
+
+\subsection{边界}
+
+第 8 节的实测范围止于 IR 层：本机运行了 Pass，但没有安装完整 CANN、没有配置 Ascend 驱动、没有生成或运行 kernel \code{.o}，也没有在真实 NPU 上执行。已确认这些对"观察 MLIR 中端 lowering"不是必需项——CANN 只在编译 kernel 并上板执行时才需要。
+
+另需区分：图~\ref{fig:lowering} 中的 Arith/Tensor 与 HFusion 两层是依据官方架构资料整理的概念主线，本次逐行核对与实跑的实物位于 HIVM 层。\cite{ascend-build,ascend-readme}
 
 \clearpage
 \section{实验可复现性}
@@ -739,9 +799,15 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
     \code{08_mlir_exploration.sh} & 记录进阶部分的只读环境检查与范围判定 \\
     \code{09_final_validation.sh} & 三路实现统一比对并输出总表 \\
     \code{10_build_report.sh} & 用 Tectonic 编译本报告 \\
+    \midrule
+    \code{11_ascend_configure.sh} & 配置 AscendNPU-IR（只配置不编译），校验 \code{bishengir-opt} / \code{hivmc} target \\
+    \code{12_ascend_build.sh} & 编译 \code{bishengir-opt} 单个 target \\
+    \code{13_ascend_pass_runs.sh} & 逐字执行上游 RUN 命令并用其 CHECK 做 FileCheck；保存两组 Before/After \\
     \bottomrule
   \end{tabularx}
 \end{table}
+
+第 11–13 个脚本针对进阶部分，依赖仓库外的源码与工具链（\code{third\_party/} 与 \code{.venv-ascendnpu}，二者不进版本管理；获取方式见第 11 节的记录）。前 10 个脚本只依赖课程环境。
 
 统一执行形式为 \code{bash scripts/<name>.sh 2>&1 | tee logs/<name>.log}。脚本以 \code{set -euo pipefail} 开头，任一步失败即中止，因此 \code{logs/} 中的记录不会掩盖中途错误。实验前需先 \code{source ../env.sh} 以取得 QEMU 与 RISC-V 工具链路径；\code{09_final_validation.sh} 已内置该步骤。
 
@@ -755,9 +821,9 @@ Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak
 
 \textbf{RISC-V 的落地方式。} 参数与返回值共用 \code{a0}，\code{calc} 用 32 字节栈帧保存 \code{ra}、\code{s0} 和三个局部量，控制流落为比较加条件跳转的标签结构。手写版与 Clang 自动版采用了\emph{相同的栈帧布局}，但在取模和 \code{main} 的帧大小上取舍不同，可见 ABI 约束是刚性的，具体实现仍有空间。
 
-\textbf{优化与抽象层次。} \code{-O2} 先改变值的表示（栈槽变 SSA，出现 32 个 \code{phi}），再重写算术（奇偶判断退化为变长左移，整个 \code{if/else} 消失），最后才由后端按目标能力决定是否向量化：x86-64 生成四 lane 运算和 \code{paddd}，RV64 因缺少 RVV 仍是标量循环。两种目标的汇编行数一增一减（87$\to$385 与 91$\to$56），说明行数不能作为优化效果的度量。MLIR 部分则从另一个方向回答了分层问题：HIVM 层把 GM/UB 地址空间和 \code{hivm.hir.load}/\code{vadd}/\code{store} 显式写入 IR，把原本隐含的硬件搬运策略变成可分析、可规划的信息。
+\textbf{优化与抽象层次。} \code{-O2} 先改变值的表示（栈槽变 SSA，出现 32 个 \code{phi}），再重写算术（奇偶判断退化为变长左移，整个 \code{if/else} 消失），最后才由后端按目标能力决定是否向量化：x86-64 生成四 lane 运算和 \code{paddd}，RV64 因缺少 RVV 仍是标量循环。两种目标的汇编行数一增一减（87$\to$385 与 91$\to$56），说明行数不能作为优化效果的度量。MLIR 部分从另一个方向回答了分层问题，且本轮已有实测支撑：PlanMemory 把四个 \code{memref.alloc()} 改写为带偏移的 \code{pointer\_cast} 并注入含 UB 容量与对齐的芯片规格，而计算指令一条未改；InjectSync 在只有 load/vadd/store 的用例上注入 MTE2$\to$V 与 V$\to$MTE3 两组同步和一条 \code{PIPE\_ALL} barrier。两者共同说明，硬件搬运与流水线语义是被逐步、显式地写进 IR 的。
 
-\textbf{本实验的边界。} 所有前七节结论均基于本机真实产物，可用第 9 节的脚本逐阶段复现。第 8 节的 MLIR/Ascend 部分受限于环境（无 CMake、Ninja 1.10.1 低于要求的 1.12），为官方文档与上游测试用例的结构分析，没有运行 \code{bishengir-opt}，没有生成或运行 kernel，也没有在 Ascend NPU 上执行；报告中不对此作任何实测声明。
+\textbf{本实验的边界。} 八节结论均基于本机真实产物，可用第 9 节的脚本逐阶段复现。第 8 节的 Ascend 部分虽从源码构建了 \code{bishengir-opt} 并实跑了两组 Pass，但范围止于 IR 层：没有安装 CANN、没有配置驱动、没有生成或运行 kernel \code{.o}、没有在真实 NPU 上执行。这些经确认不是观察 MLIR 中端 lowering 的必需项。此外，lowering 主线中的 Arith/Tensor 与 HFusion 两层仍属依据官方资料整理的概念说明，实物只到 HIVM 层。
 
 \begin{thebibliography}{99}
 \footnotesize

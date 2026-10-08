@@ -1,8 +1,12 @@
-Pass execution status: ANALYSIS-ONLY; no local Pass command was run.
+=== AscendNPU-IR 上游 RUN 命令逐字执行 ===
+bishengir-opt: bishengir-opt 2.0.0 (https://gitcode.com/Ascend/ascendnpu-ir.git 2ac1b376da1d 2026-10-09) 
+FileCheck:     /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build/bin/FileCheck
 
-Official upstream Test Case: bishengir/test/Dialect/HIVM/plan-memory.mlir
-Official RUN line (source evidence, not executed locally):
-  bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+--- [1] plan-memory.mlir  默认策略 ---
+RESULT: PASS
 
-The saved test excerpt preserves its upstream RUN/CHECK comments. `bishengir-opt` and `FileCheck` were not available locally. No `plan_memory_before.mlir` or `plan_memory_after.mlir` output is claimed or saved.
-Sync Test Case: SKIPPED; PlanMemory source analysis was sufficient for the scoped exploration.
+--- [2] plan-memory.mlir  largest-first 策略 (CHECK-REORDER) ---
+RESULT: PASS
+
+--- [3] inject-sync.mlir ---
+RESULT: PASS

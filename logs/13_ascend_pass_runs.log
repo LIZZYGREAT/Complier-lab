@@ -1,0 +1,19 @@
+bishengir-opt: bishengir-opt 2.0.0 (https://gitcode.com/Ascend/ascendnpu-ir.git 2ac1b376da1d 2026-10-09) 
+FileCheck:     /home/lenovo/projects/Compiler-Labs/third_party/ascendnpu-ir/build/bin/FileCheck
+
+=== [1] 上游 RUN 命令逐字执行（含 FileCheck 断言）===
+
+--- plan-memory.mlir 默认策略 ---
+RESULT: PASS
+
+--- plan-memory.mlir largest-first 策略（CHECK-REORDER）---
+RESULT: PASS
+
+--- inject-sync.mlir ---
+RESULT: PASS
+
+=== [2] 单用例 Before / After ===
+plan-memory  before alloc=5  after alloc=0  pointer_cast=4
+inject-sync  before(set_flag 代码行)=0  after set_flag=2  after wait_flag=2  after barrier=1
+
+Stage 13 AscendNPU-IR pass runs: PASS
