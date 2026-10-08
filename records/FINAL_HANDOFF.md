@@ -14,18 +14,25 @@
 | 7 O0/O2 优化对比 | PASS | `cafe4d4` |
 | 8 MLIR / Ascend VecAdd 与 PlanMemory 源码分析 | PASS（ANALYSIS-ONLY；工具条件不足时按 Stage 1B） | `d25b04c`（基础记录） + `2c42438`（本轮分析） |
 | 9 三路最终一致性验证 | PASS | `bfd4f20` |
-| 10 最终 PDF 报告 | PASS（更新后重编译，7 页） | `a3e2f79` |
+| 10 最终 PDF 报告 | PASS（深度修订后重编译，18 页） | `a3e2f79`、本轮修订 |
 
 ## 交付入口
 
-- 正式报告：`report/report.pdf`
-- LaTeX 源稿：`report/report.tex`
+- 正式报告：`report/report.pdf`（18 页；哈希随构建时间变化，见 `logs/10_report_build.log`）
+- LaTeX 源稿：`report/report.tex`（报告唯一正式源文件）
 - 实验结果矩阵：`outputs/final-validation.md`
 - 各阶段记录：`records/00_environment.md` 至 `records/10_report.md`
+- 错误与修复留档：`records/errors_and_fixes.md`
 - 日志与脚本索引：`records/artifact_index.md`
 - 最终验证日志：`logs/09_final_validation.log`
 - 报告构建日志：`logs/10_report_build.log`
 - LaTeX 引擎日志：`logs/10_latex_compile.log`
+
+## 本轮修订（2026-10-08）
+
+报告从 7 页扩写到 18 页，主要补充真实过程证据而非教材内容：编译器内部阶段与产物对应表、`.i` 行标记与 `readelf` 文件头/节区/符号/重定位证据、手写 `manual.ll` 与 `manual.s` 完整清单、自动生成与手写 IR 的组织方式对比、`calc` 的 32 字节栈帧图、Clang 参考汇编与手写汇编在取模实现与 `main` 帧大小上的差异、`-O2` 下奇偶判断退化为变长左移的分析、MLIR 部分的证据边界声明，以及各阶段复现入口。报告内的每个数字都与仓库产物核对过。
+
+同时新建了此前缺失的 `records/errors_and_fixes.md`，并把课程文档目录 `docs/` 纳入版本管理。`report/figures/` 保持为空目录：所有图均为内联 TikZ 矢量图，不依赖位图素材。
 
 ## 全局范围说明
 
