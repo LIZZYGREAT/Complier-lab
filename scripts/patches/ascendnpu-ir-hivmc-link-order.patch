@@ -1,0 +1,19 @@
+diff --git a/bishengir/tools/bishengir-opt/CMakeLists.txt b/bishengir/tools/bishengir-opt/CMakeLists.txt
+index 8b61528..b188f13 100644
+--- a/bishengir/tools/bishengir-opt/CMakeLists.txt
++++ b/bishengir/tools/bishengir-opt/CMakeLists.txt
+@@ -43,4 +43,14 @@ endif()
+ 
+ target_link_libraries(bishengir-opt PRIVATE ${LIBS})
+ 
++# BiShengIRHIVMCLib 与 BiShengIRHIVMCLibA3/A5 之间存在静态库循环：
++# A3/A5 引用 HIVMCLib 的 setSanitizerAddrArgName，而 HIVMCLib 又调用
++# runHIVMCCompileA3/A5。静态库单遍扫描会漏解该循环，导致
++# "undefined reference to setSanitizerAddrArgName"。
++# 这里用 LINK_GROUP:RESCAN 让链接器对这组库重复扫描
++# （在 GNU 工具链上生成 --start-group/--end-group），
++# 不引入 CMake 层面的依赖环，因此不会与 OBJECT_LIBRARY 冲突。
++target_link_libraries(bishengir-opt PRIVATE
++  "$<LINK_GROUP:RESCAN,BiShengIRHIVMCLib,BiShengIRHIVMCLibA3,BiShengIRHIVMCLibA5>")
++
+ mlir_check_all_link_libraries(bishengir-opt)
