@@ -692,11 +692,16 @@ PlanMemory 根据 buffer 生命周期和硬件约束规划片上地址。它把�
 Ascend 上游测试文件 \code{plan-memory.mlir} 中的 \texttt{test\allowbreak\_mem\allowbreak\_allocate\allowbreak\_basic} 用例包含四个大小为 $16\times16\times16\times2=8192$ 字节的 UB 临时 buffer。其上游 RUN 命令与关键断言为：
 
 \begin{lstlisting}
-// RUN: bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 \
+//        -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+// CHECK-LABEL: func.func @test_mem_allocate_basic
 // CHECK-NOT: memref.alloc()
-// CHECK: hivm.hir.pointer_cast ... offset = 0
+// CHECK: %[[CONST0:.*]] = arith.constant 0 : i64
+// CHECK: {{.*}} = hivm.hir.pointer_cast(%[[CONST0]])
 \end{lstlisting}
-\code{CHECK-NOT} 断言输出不再包含 \code{memref.alloc()}，\code{CHECK} 要求这些 buffer 被改写为带偏移的 \code{pointer_cast}。可见该 Pass 不改变计算语义，只把抽象的 UB 分配请求落实为各硬件缓冲区中的具体地址。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
+\code{CHECK-NOT} 断言输出不再包含 \code{memref.alloc()}，随后的 \code{CHECK} 要求这些 buffer 被改写为引用同一常量的 \code{pointer_cast}。可见该 Pass 不改变计算语义，只把抽象的 UB 分配请求落实为各硬件缓冲区中的具体地址。
+
+\code{RUN} 行中的 \code{-hacc-append-device-spec=target=Ascend910B1} 是必需项：PlanMemory 要先知道目标芯片规格，才能应用相应的对齐与容量约束。该文件还有第二条 \code{RUN}，以 \code{=largest-first} 选择另一种分配策略并用 \code{CHECK-REORDER} 前缀检查；本报告只讨论默认策略那条。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
 
 \subsection{观察范围与证据边界}
 

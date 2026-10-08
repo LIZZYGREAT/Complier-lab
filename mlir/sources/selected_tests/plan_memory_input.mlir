@@ -1,5 +1,11 @@
-// Excerpt from Ascend/AscendNPU-IR/bishengir/test/Dialect/HIVM/plan-memory.mlir
-// RUN: bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+// Excerpt from Ascend/AscendNPU-IR bishengir/test/Dialect/HIVM/plan-memory.mlir
+// Source commit: 2ac1b376da1d4d4f263f41622a41e495370ea234
+// RUN: bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory=plan-memory-strategy=largest-first -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=CHECK-REORDER
+//
+// Note: both RUN lines require -hacc-append-device-spec=target=Ascend910B1.
+// The first (default strategy) is the one analysed below; the second selects
+// plan-memory-strategy=largest-first and checks with the CHECK-REORDER prefix.
 
 // -----
 

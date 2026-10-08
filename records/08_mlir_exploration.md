@@ -37,7 +37,7 @@ HFusion 到 HIVM 的图是依官方多层接入文档和作业要求建立的概
 使用的真实上游文件是 [官方 `plan-memory.mlir`](https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/plan-memory.mlir) 中的 `test_mem_allocate_basic`。其上游 `RUN` 为：
 
 ```sh
-bishengir-opt %s -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
+bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 -hivm-plan-memory -split-input-file -verify-diagnostics | FileCheck %s
 ```
 
 该用例输入有四个独立 UB `memref.alloc()`，类型均为 `16×16×16×f16`，每块 8192 字节。上游 `CHECK` 要求变换结果中不再有 `memref.alloc()`，并检查四个分配位置都对应偏移 0 的 `hivm.hir.pointer_cast`。这展示了 pass 把“申请 UB 临时区”转成显式地址表达的结果形状。
