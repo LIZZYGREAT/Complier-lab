@@ -919,17 +919,11 @@ t;"
 
  [1
 
-] [2] [3] [4] [5] [6] [7] [8]
-Underfull \hbox (badness 6559) in paragraph at lines 470--471
-[]\TU/FandolSong-Regular(0)/m/n/10.95 手 写 汇 编 由 \TU/lmtt/m/n/10.95 riscv64-unkn
-own-elf-gcc \TU/FandolSong-Regular(0)/m/n/10.95 汇 编，|  并 静 态 链 接 \TU/lmr/m/n/10
-.95 SysY runtime \TU/FandolSong-Regular(0)/m/n/10.95 归 档
- []
+] [2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13]
+[14] [15
 
-[9] [10] [11] [12] [13] [14
-
-] [15] (report.aux)
+] [16] (report.aux)
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: D85649AF606DE21F58C324D00BA4B7B8;3234.
  )
-Output written on report.xdv (15 pages, 346260 bytes).
+Output written on report.xdv (16 pages, 349372 bytes).
