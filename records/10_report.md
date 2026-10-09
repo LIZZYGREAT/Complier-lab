@@ -28,7 +28,7 @@ bash scripts/10_build_report.sh 2>&1 | tee logs/10_report_build.log
 报告含 10 个表格和 4 张 TikZ 矢量图。最终 PDF SHA-256：
 
 ```text
-6e4f7236e78286a040ef7c32c2aa9474263743bd0e6b7ddb54e9a9eaf867a18a
+434721c22b0ef7f6b7ed2a035adf84207908d81ca34ffcdf205f9965d1e36e6a
 ```
 
 **验收：PASS。** PDF 已成功重编译；编译无错误、无排版警告或未定义引用。数字和结论只在本实验实际覆盖的范围内使用，未据此声称性能提升或真实 NPU 执行结果。

@@ -656,10 +656,6 @@ llvm 19.1.7 06913395ef8a   Release build
 
 构建工具时遇到上游静态库之间的循环依赖。本地补丁使用 CMake 的 \code{LINK\_GROUP:RESCAN} 让链接器重新扫描相关静态库；补丁只改变 \code{bishengir-opt} 的链接参数，没有修改 Pass 实现。详细构建过程和补丁见 \code{records/12\_ascend\_build.md} 与 \code{scripts/patches/}。随后三条上游 RUN 命令全部通过 FileCheck，包括 PlanMemory 的两种策略和 InjectSync。
 
-\subsection{边界}
-
-这部分实验止于 IR Pass。Arith/Tensor 与 HFusion 是根据资料整理的前置层次，本机实跑的输入从 HIVM 开始；实测确认了 Pass 对 IR 的结构变换，但没有覆盖最终设备运行。本次没有安装 CANN、配置驱动、生成 kernel \code{.o} 或在 NPU 上运行。\cite{ascend-build,ascend-readme}
-
 \clearpage
 \section{实验可复现性}
 
