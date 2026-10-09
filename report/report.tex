@@ -19,7 +19,7 @@
   citecolor=blue!45!black,
   urlcolor=blue!55!black,
   pdftitle={基于 Clang/LLVM 的语言处理流程、SysY 手写实现与 AscendNPU IR 实验},
-  pdfauthor={甘文杰 2412700},
+  pdfauthor={甘文杰（2412700）；向宇航（2413318）},
   pdfsubject={编译原理实验报告}
 }
 \urlstyle{same}
@@ -66,7 +66,7 @@
 }
 
 \title{\heiti 基于 Clang/LLVM 的语言处理流程、SysY 实现与 AscendNPU IR 实验}
-\author{甘文杰 2412700}
+\author{甘文杰（学号：2412700）\\向宇航（学号：2413318）}
 \date{2026 年 10 月 7 日}
 
 \begin{document}
@@ -77,6 +77,12 @@
 
 \noindent\textbf{关键词：} 编译器；Clang；LLVM IR；RISC-V；ABI；MLIR；lowering
 \end{abstract}
+
+\section*{分工}
+
+\noindent\textbf{甘文杰：} 负责基础内容撰写，并对 Ascend 部分进行 Review。\\
+\textbf{向宇航：} 负责环境配置、资料查找和 Ascend 部分撰写，并对基础部分进行 Review。\\
+双方协作完成报告的整合与定稿。
 
 \section{引言}
 
@@ -467,7 +473,7 @@ calc:
 
 \subsection{链接与运行}
 
-手写汇编由 \code{riscv64-unknown-elf-gcc} 汇编，并静态链接 SysY runtime 归档 \code{libsysy_riscv.a}。关键链接选项配置：
+使用 \code{riscv64-unknown-elf-gcc} 汇编手写程序，并静态链接课程提供的 \code{libsysy_riscv.a}。链接配置为静态模式，采用 \code{medany} 代码模型，文本段地址设为 \code{0x90000000}：
 
 \begin{lstlisting}
 -static -mcmodel=medany -Wl,--no-relax,-Ttext=0x90000000
