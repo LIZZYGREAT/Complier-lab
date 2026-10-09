@@ -381,7 +381,7 @@ calc:
     bne  a0, zero, .LBB0_4
 \end{lstlisting}
 
-与手写版本相比，这次 Clang 输出的 \code{calc} 与手写版都使用 32 字节栈帧，\code{ra}、\code{s0} 和局部变量的位置也相同。两版对奇偶性的处理不同：Clang 把已知除数为 2 的余数计算化成一组移位和算术指令；手写版直接用 \code{remw}。\code{rv64gc} 包含整数乘除扩展，因此 \code{remw} 是可用指令，Clang 选择算术展开并非因为架构没有取余操作。这个例子中 \code{i} 从正数 1 开始递增，所以该变换与程序使用范围相符。两版的 \code{main} 栈帧也不同：Clang -O0 使用 48 字节，手写版使用 16 字节，反映出未优化代码和人工组织值的方式不同；这不代表某一版运行更快。
+与手写版本相比，这次 Clang 输出的 \code{calc} 与手写版都使用 32 字节栈帧，\code{ra}、\code{s0} 和局部变量的位置也相同。两版对奇偶性的处理不同：Clang 把已知除数为 2 的余数计算化成一组移位和算术指令；手写版直接用 \code{remw}。\code{rv64gc} 包含整数乘除扩展，因此 \code{remw} 是可用指令，Clang 选择算术展开并非因为架构没有取余操作。这个例子中 \code{i} 从正数 1 开始递增，所以该变换与程序使用范围相符。两版的 \code{main} 栈帧也不同：Clang -O0 使用 48 字节，手写版使用 16 字节，反映出未优化代码和人工组织值的方式不同。
 
 \begin{table}[H]
   \centering\small
@@ -467,13 +467,13 @@ calc:
 
 \subsection{链接与运行}
 
-手写汇编由 \code{riscv64-unknown-elf-gcc} 汇编，并静态链接课程已有的 SysY runtime 归档 \code{libsysy_riscv.a}。关键链接选项沿用课程配置：
+手写汇编由 \code{riscv64-unknown-elf-gcc} 汇编，并静态链接 SysY runtime 归档 \code{libsysy_riscv.a}。关键链接选项配置：
 
 \begin{lstlisting}
 -static -mcmodel=medany -Wl,--no-relax,-Ttext=0x90000000
 \end{lstlisting}
 
-产物 \code{generated/manual_riscv} 是 RISC-V ELF 可执行文件，入口地址为 \code{0x90000044}，由 \code{qemu-riscv64} 用户态模拟执行。runtime 的析构函数会向 stderr 打印 \code{TOTAL: 0H-0M-0S-0us} 计时摘要；脚本只比较标准输出，因此该摘要不参与数值判定。
+产物 \code{generated/manual_riscv} 是 RISC-V ELF 可执行文件，入口地址为 \code{0x90000044}，由 \code{qemu-riscv64} 用户态模拟执行。runtime 的析构函数会向 stderr 打印 \code{TOTAL: 0H-0M-0S-0us} 计时摘要。
 
 \section{运行验证}
 
@@ -494,10 +494,6 @@ calc:
     \bottomrule
   \end{tabular}
 \end{table}
-
-表~\ref{tab:validation} 的数字来自脚本 \code{scripts/09\_final\_validation.sh} 的实际输出。测试框架 \code{source/test\_reference.sh} 将六组输入逐一传给被测程序，并与事先确定的期望值比较，而不是把三个实现彼此作为基准。这样，即使三个实现以相同方式出错，也不会仅因输出一致而通过。
-
-参考程序和两个手写实现的单次结果保存在 \code{outputs/} 下，汇总表为 \code{final-validation.md}，完整命令输出见 \code{logs/09_final_validation.log}。三种程序都与预期结果一致。固定测试不能覆盖所有输入，但提供了检查本例手写 IR 和汇编的明确对照。
 
 \section{优化观察：-O0 与 -O2}
 
@@ -559,7 +555,7 @@ x86-64 的结果中可以看到四个 \code{i32} 组成的向量运算、XMM 寄
 
 \section{MLIR 与 AscendNPU IR}
 
-前文的 LLVM IR 已显式表示变量读写和分支；面向 NPU 时，还需要表达张量形状、存储位置、数据搬运和硬件流水线。MLIR 允许编译器用不同 Dialect 保留这些层次的信息，再逐步 lowering。较高层的张量与算子语义有利于融合和 tiling；HIVM 则能表达 GM、UB 以及对应的数据搬运和向量运算。图~\ref{fig:lowering} 是依据课程要求与官方资料整理的概念路线，并非本机完整运行得到的转换链。\cite{mlir-lang,mlir-rationale,ascend-framework}
+前文的 LLVM IR 已显式表示变量读写和分支；面向 NPU 时，还需要表达张量形状、存储位置、数据搬运和硬件流水线。MLIR 允许编译器用不同 Dialect 保留这些层次的信息，再逐步 lowering。较高层的张量与算子语义有利于融合和 tiling；HIVM 则能表达 GM、UB 以及对应的数据搬运和向量运算。图~\ref{fig:lowering} 是依据课程要求与官方资料整理的概念路线。\cite{mlir-lang,mlir-rationale,ascend-framework}
 
 \begin{figure}[H]
   \centering
@@ -577,11 +573,11 @@ x86-64 的结果中可以看到四个 \code{i32} 组成的向量运算、XMM 寄
     \draw[flow] (hfusion) -- (hivm);
     \draw[flow] (hivm) -- (lower);
   \end{tikzpicture}
-  \caption{VecAdd 的概念 lowering 路线；本次实跑从 HIVM 层开始}
+  \caption{VecAdd 的概念 lowering 路线}
   \label{fig:lowering}
 \end{figure}
 
-这条概念路线中，高层表示主要描述“两个向量逐元素相加”；到了 HIVM，内存空间和搬运步骤已显式出现。官方 VecAdd 样例使用 16 个 \code{i16} 元素：A、B、C 位于 GM，输入通过 \code{hivm.hir.load} 搬入 UB，在 UB 上执行 \code{hivm.hir.vadd}，再由 \code{hivm.hir.store} 写回 GM。下列代码是对上游文件的结构摘录，省略了完整类型和入口属性，并非从 Arith/Tensor 实际 lowering 得到的输出。\cite{ascend-framework,ascend-vecadd}
+这条概念路线中，高层表示主要描述“两个向量逐元素相加”；到了 HIVM，内存空间和搬运步骤已显式出现。官方 VecAdd 样例使用 16 个 \code{i16} 元素：A、B、C 位于 GM，输入通过 \code{hivm.hir.load} 搬入 UB，在 UB 上执行 \code{hivm.hir.vadd}，再由 \code{hivm.hir.store} 写回 GM。下列代码是对上游文件的结构摘录。\cite{ascend-framework,ascend-vecadd}
 
 \begin{lstlisting}
 func.func @add(%a: memref<16xi16, #hivm.address_space<gm>>,
@@ -602,7 +598,7 @@ func.func @add(%a: memref<16xi16, #hivm.address_space<gm>>,
 
 \subsection{实测一：PlanMemory 规划 UB 地址}
 
-PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上地址；在这个用例中，它把 \code{memref.alloc} 改写为带偏移的 \code{hivm.hir.pointer_cast}。实验采用上游 \code{plan-memory.mlir} 中的 \code{test\_mem\_allocate\_basic}：其中四个 UB buffer 都是 $16\times16\times16$ 的 \code{f16} 张量，每个占 8192 字节。测试自带的默认策略命令为：
+PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上地址；在这个用例中，它把 \code{memref.alloc} 改写为带偏移的 \code{hivm.hir.pointer_cast}。实验采用上游 \code{plan-memory.mlir} 中的 \code{test\_mem\_allocate\_basic}：其中四个 UB buffer 都是 $16\times16\times16$ 的 \code{f16} 张量，每个占 8192 字节。测试默认策略命令为：
 
 \begin{lstlisting}
 // RUN: bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 \
@@ -630,7 +626,7 @@ PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上�
   \end{tabular}
 \end{table}
 
-输出中四个分配都成为 \code{pointer\_cast(\%c0\_i64)}，即偏移为 0；\code{load}、三次 \code{vadd} 和 \code{store} 保持不变。模块里还出现 UB 容量、对齐等目标参数。需要区分的是，这些参数由命令中的 \code{-hacc-append-device-spec} 加入，不是 PlanMemory 自己生成的。该用例的 offset-0 结果只描述这组输入和策略，不能推广到其他程序；更复杂的生命周期和别名关系可能得到不同布局。Before/After 文件保存在 \code{mlir/outputs/}。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
+输出中四个分配都成为 \code{pointer\_cast(\%c0\_i64)}，即偏移为 0；\code{load}、三次 \code{vadd} 和 \code{store} 保持不变。模块里还出现 UB 容量、对齐等目标参数。这些参数由命令中的 \code{-hacc-append-device-spec} 加入，不是 PlanMemory 自己生成的。该用例的 offset-0 结果只描述这组输入和策略；更复杂的生命周期和别名关系可能得到不同布局。Before/After 文件保存在 \code{mlir/outputs/}。\cite{ascend-planmemory,ascend-passes,ascend-planmemory-test}
 
 \subsection{实测二：InjectSync 表达流水线依赖}
 
@@ -651,7 +647,7 @@ MTE2 与 MTE3 表示数据搬运流水，V 表示向量计算流水。Pass 在 l
 
 \subsection{构建与验证方式}
 
-构建环境使用用户级虚拟环境中的 CMake 4.4.4 和 Ninja 1.13.2，没有替换系统工具。AscendNPU-IR 与 LLVM 子项目分别固定在提交 \code{2ac1b376} 和 \code{06913395}；构建出的工具报告版本为：
+构建环境使用用户级虚拟环境中的 CMake 4.4.4 和 Ninja 1.13.2。AscendNPU-IR 与 LLVM 子项目分别固定在提交 \code{2ac1b376} 和 \code{06913395}；构建出的工具报告版本为：
 
 \begin{lstlisting}
 bishengir-opt 2.0.0 (gitcode.com/Ascend/ascendnpu-ir 2ac1b376da1d)
@@ -692,37 +688,35 @@ llvm 19.1.7 06913395ef8a   Release build
   \end{tabularx}
 \end{table}
 
-前 10 个脚本使用课程环境中已有的工具。Ascend 的配置、构建和 Pass 测试还依赖仓库外的源码、LLVM 子项目、虚拟环境及本地链接补丁；这些资源的版本和获取过程记录在 \code{records/11\_ascend\_build\_precheck.md} 与 \code{records/12\_ascend\_build.md} 中，未包含在本仓库。运行 RISC-V 阶段前需加载 \code{../env.sh}；各脚本的输入、命令和实际结果可与对应日志核对。
-
 \section{结论}
 
-作为编译原理初学者，本次实验将源程序、LLVM IR、汇编、目标文件和可执行程序联系起来。检查 \code{example.o} 可见，它仍是 \code{ET\_REL} 文件，并保留对 \code{getint}/\code{putint} 的引用；显式链接之后，这些引用才由 runtime 提供定义。由此可以区分汇编器与链接器的职责。
+本次实验将源程序、LLVM IR、汇编、目标文件和可执行程序联系起来。检查 \code{example.o} 可见，它仍是 \code{ET\_REL} 文件，并保留对 \code{getint}/\code{putint} 的引用；显式链接之后，这些引用才由 runtime 提供定义。由此可以区分汇编器与链接器的职责。
 
 LLVM IR 中，循环条件、奇偶分支和回边由基本块与 \code{br} 指令表示，并据此完成了手写 IR。RV64 汇编展示了同一控制流在目标架构上的实现：参数和返回值使用 \code{a0}，\code{calc} 通过栈帧保存局部变量。手写版本与 Clang 输出的栈帧布局接近，但奇偶判断采用了不同指令。
 
-优化实验显示，\code{-O2} 会改变变量表示，并化简分支和算术；最终是否向量化还取决于目标架构。本例在 x86-64 上出现向量运算，在不含 RVV 的 RV64 目标上仍是标量循环。由于没有测量运行时间，本实验只比较代码结构，不据此判断运行速度。
+优化实验显示，\code{-O2} 会改变变量表示，并化简分支和算术；最终是否向量化还取决于目标架构。本例在 x86-64 上出现向量运算，在不含 RVV 的 RV64 目标上仍是标量循环。
 
-AscendNPU IR 实验展示了硬件约束如何进入较低层表示。PlanMemory 用例将四个临时分配转换为偏移为 0 的 \code{pointer\_cast}，计算操作保持不变；InjectSync 则在数据搬运与向量计算之间加入 flag/wait，并在函数末尾加入 barrier。三条上游 RUN 命令及其 FileCheck 断言均通过。Arith/Tensor 到 HFusion 的部分仍是资料整理，实测范围从 HIVM 开始；本次没有编译 kernel 或在 NPU 上运行。
+AscendNPU IR 实验展示了硬件约束如何进入较低层表示。PlanMemory 用例将四个临时分配转换为偏移为 0 的 \code{pointer\_cast}，计算操作保持不变；InjectSync 则在数据搬运与向量计算之间加入 flag/wait，并在函数末尾加入 barrier。三条上游 RUN 命令及其 FileCheck 断言均通过。Arith/Tensor 到 HFusion 的部分仍是资料整理，实测范围从 HIVM 开始。
 
-整体上，本次实验完成了处理流程观察、手写实现和固定用例验证，并通过真实 Pass 输出补充了 Ascend IR 实验。编译器仍有许多实现细节未涉及；当前保存的产物能够说明各阶段表示发生的变化，也限定了结论适用的范围。
+整体上，本次实验完成了处理流程观察、手写实现和固定用例验证，并通过真实 Pass 输出补充 Ascend IR 实验。
 
 \begin{thebibliography}{99}
 \footnotesize
 \setlength{\itemsep}{0pt}
 \setlength{\parsep}{0pt}
 \setlength{\topsep}{0.2em}
-\bibitem{mlir-lang} LLVM Project. \emph{MLIR Language Reference}. \url{https://mlir.llvm.org/docs/LangRef/}（访问日期：2026-10-07）.
-\bibitem{mlir-rationale} LLVM Project. \emph{MLIR Rationale}. \url{https://github.com/llvm/llvm-project/blob/main/mlir/docs/Rationale/Rationale.md}（访问日期：2026-10-07）.
-\bibitem{mlir-llvm} LLVM Project. \emph{Targeting LLVM IR from MLIR}. \url{https://mlir.llvm.org/docs/TargetLLVMIR/}（访问日期：2026-10-07）.
-\bibitem{ascend-framework} Ascend. \emph{AscendNPU-IR Framework Integration}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/developer_guide/conversion/framework_interface.md}（访问日期：2026-10-07）.
-\bibitem{ascend-vecadd} Ascend. \emph{HIVM VecAdd add.mlir}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/add.mlir}（访问日期：2026-10-07）.
-\bibitem{ascend-readme} Ascend. \emph{HIVM VecAdd README and host wrapper}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/README.md}（访问日期：2026-10-07）.
-\bibitem{ascend-planmemory} Ascend. \emph{Plan Memory}. \url{https://ascendnpu-ir.gitcode.com/en/developer_guide/features/PlanMemory/PlanMemory.html}（访问日期：2026-10-07）.
-\bibitem{ascend-passes} Ascend. \emph{HIVM Passes}. \url{https://ascendnpu-ir.gitcode.com/en/developer_guide/passes/hivm_passes.html}（访问日期：2026-10-07）.
-\bibitem{ascend-planmemory-test} Ascend. \emph{PlanMemory Test Case}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/plan-memory.mlir}（访问日期：2026-10-09）.
-\bibitem{ascend-sync-test} Ascend. \emph{InjectSync Test Case}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/inject-sync.mlir}（访问日期：2026-10-09）.
-\bibitem{ascend-build} Ascend. \emph{AscendNPU-IR Build and Installation}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/introduction/quick_start/installing_guide.md}（访问日期：2026-10-07）.
-\bibitem{course-docs} Compiler-Labs. 编译原理作业要求与执行流程（本地课程文档，访问日期：2026-10-07）.
+\bibitem{mlir-lang} LLVM Project. \emph{MLIR Language Reference}. \url{https://mlir.llvm.org/docs/LangRef/}.
+\bibitem{mlir-rationale} LLVM Project. \emph{MLIR Rationale}. \url{https://github.com/llvm/llvm-project/blob/main/mlir/docs/Rationale/Rationale.md}.
+\bibitem{mlir-llvm} LLVM Project. \emph{Targeting LLVM IR from MLIR}. \url{https://mlir.llvm.org/docs/TargetLLVMIR/}.
+\bibitem{ascend-framework} Ascend. \emph{AscendNPU-IR Framework Integration}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/developer_guide/conversion/framework_interface.md}.
+\bibitem{ascend-vecadd} Ascend. \emph{HIVM VecAdd add.mlir}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/add.mlir}.
+\bibitem{ascend-readme} Ascend. \emph{HIVM VecAdd README and host wrapper}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Integration/HIVM/VecAdd/README.md}.
+\bibitem{ascend-planmemory} Ascend. \emph{Plan Memory}. \url{https://ascendnpu-ir.gitcode.com/en/developer_guide/features/PlanMemory/PlanMemory.html}.
+\bibitem{ascend-passes} Ascend. \emph{HIVM Passes}. \url{https://ascendnpu-ir.gitcode.com/en/developer_guide/passes/hivm_passes.html}.
+\bibitem{ascend-planmemory-test} Ascend. \emph{PlanMemory Test Case}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/plan-memory.mlir}.
+\bibitem{ascend-sync-test} Ascend. \emph{InjectSync Test Case}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/bishengir/test/Dialect/HIVM/inject-sync.mlir}.
+\bibitem{ascend-build} Ascend. \emph{AscendNPU-IR Build and Installation}. \url{https://github.com/Ascend/AscendNPU-IR/blob/master/docs/source/en/introduction/quick_start/installing_guide.md}.
+
 \end{thebibliography}
 
 \end{document}
