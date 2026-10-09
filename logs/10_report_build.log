@@ -1,17 +1,20 @@
 Stage 10: compile report/report.tex to PDF with Tectonic
 Tectonic 0.16.9
 note: Running TeX ...
+warning: report.tex:471: Underfull \hbox (badness 6559) in paragraph at lines 470--471
 note: Rerunning TeX because "report.out" changed ...
+warning: report.tex:471: Underfull \hbox (badness 6559) in paragraph at lines 470--471
+warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
 note: Running xdvipdfmx ...
-note: Writing `/tmp/compiler-labs-latex.Ivn8Nw/out/report.log` (31.9638671875 KiB)
-note: Writing `/tmp/compiler-labs-latex.Ivn8Nw/out/report.pdf` (361.2587890625 KiB)
+note: Writing `/tmp/compiler-labs-latex.CoJqhs/out/report.log` (32.2705078125 KiB)
+note: Writing `/tmp/compiler-labs-latex.CoJqhs/out/report.pdf` (349.33984375 KiB)
 note: Skipped writing 2 intermediate files (use --keep-intermediates to keep them)
 
 [PDF artifact]
 /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf: PDF document, version 1.5 (zip deflate encoded)
-6e4f7236e78286a040ef7c32c2aa9474263743bd0e6b7ddb54e9a9eaf867a18a  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
+434721c22b0ef7f6b7ed2a035adf84207908d81ca34ffcdf205f9965d1e36e6a  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
 LaTeX source: report/report.tex
-Tectonic cache: /tmp/compiler-labs-tectonic-cache-review
+Tectonic cache: /home/lenovo/.cache/compiler-labs/tectonic-cache
 Build-owned temporary download, output, and default-cache files are removed on exit.
 
 Stage 10 report build: PASS
