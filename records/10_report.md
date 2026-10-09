@@ -1,63 +1,34 @@
-# 阶段 10：以 LaTeX 撰写并编译最终报告
+# 阶段 10：报告全篇修订与 PDF 构建
 
-## 目标
+## 修订目标
 
-按课程科技论文结构整理实验结果，使用 LaTeX 源文件编译 PDF，并保存构建过程与日志。
+2026-10-09 按用户要求重新修订整篇报告：以初学编译原理的学生视角叙述，保留专业术语和必要的技术说明，减少套话、重复概括与过密的数字细节。正文改为围绕本次实际产物说明处理过程；长代码清单改为关键片段，完整实现仍保留在 `llvm/`、`riscv/` 等实验目录。调整表格、代码块和段落安排，方便读者区分观察结果、解释和实验边界。
 
-## 报告内容
-
-`report/report.tex` 包含题目、摘要、关键词、引言、实验对象与环境、预处理/编译/汇编/链接、LLVM IR/CFG 与手写 IR、RV64 ABI/手写汇编、六组运行结果、O0/O2 对照、MLIR/Ascend VecAdd 与 PlanMemory 上游 Test Case 分析、实验可复现性、结论和参考文献。流程图、CFG 图和栈帧图使用 TikZ 绘制为矢量图。
-
-报告共有 13 个表、4 张图。所有引用的数字均与本仓库产物逐项核对：`example.ll` 的基本块编号、`readelf` 的节区/符号/重定位项、O0/O2 的 `alloca/load/store/phi` 计数、两种目标的汇编行数、手写汇编与 Clang 参考汇编的栈帧偏移等。
-
-### 2026-10-08 修订
-
-按用户要求对报告做了深度修订，补充了过程记录中的细节：
-
-- 新增「编译器内部各阶段」小节，把词法/语法/语义/IR 生成/中端/后端与观察到的产物对应起来。
-- 预处理、ELF 目标文件两处补充真实文本证据（`.i` 行标记、`readelf -h` 文件头、节区/符号/重定位表）。
-- 第 4 节新增「自动生成 IR 与手写 IR 组织方式对比」表，并完整列出 `manual.ll`。
-- 第 5 节新增 Clang 参考汇编片段、手写汇编片段与 32 字节栈帧图，并对比两者在取模实现和 `main` 帧大小上的差异。
-- 第 7 节改写为四个小节，给出 `-O2` 的 RV64 汇编原文，说明奇偶判断如何退化为变长左移、整个 `if/else` 如何消失。
-- 第 8 节新增「观察范围与证据边界」，逐条区分本机运行结果与资料分析。
-- 新增第 9 节「实验可复现性」，列出各阶段脚本入口。
-- 结论改为按引言四个问题逐条回答，并单列实验边界。
-- 新建 `records/errors_and_fixes.md`，补充此前缺失的错误与修复留档。
-
-AscendNPU 部分只报告官方文档和源码分析；本机没有构建/运行 `bishengir-opt`，没有 CANN 或 Ascend 设备，因此没有声称运行 Ascend Pass、编译或设备测试。PlanMemory 用例的 `RUN`/`CHECK` 只作为上游源码证据。
+报告内容包括 SysY 示例、Clang 各阶段及 ELF 产物、手写 LLVM IR 与 RV64 汇编、六组运行核对、O0/O2 观察，以及 AscendNPU IR 的 PlanMemory 和 InjectSync 实测。Ascend 部分以 Stage 13 的真实输出为准，并明确说明 Arith/Tensor 与 HFusion 路线属于资料整理，未安装 CANN 或运行真实 NPU。
 
 ## 编译过程
 
-报告由 Tectonic 0.16.9（x86-64 musl 静态构建）编译。没有安装系统软件、修改 shell 配置或提交编译器二进制。中文字体使用 Tectonic 资源包中的 Fandol 字体。
-
-本次修订构建时 GitHub 直连不可用，脚本内置的临时下载失败。改用 GitHub 加速代理取得同一 release 包并通过内置 SHA-256 校验后，把二进制放在用户缓存目录：
-
-```text
-~/.cache/compiler-labs/bin/tectonic            # 二进制，SHA-256 与脚本内置值一致
-~/.cache/compiler-labs/tectonic-cache/          # LaTeX 资源缓存，复用后构建明显变快
-```
-
-本次构建命令：
+使用 Tectonic 0.16.9 编译 `report/report.tex`。本次复用了用户级 Tectonic 二进制，将已有的宏包缓存复制到 `/tmp/compiler-labs-tectonic-cache-review` 后完成构建，没有改动系统工具。执行命令：
 
 ```bash
-TECTONIC_BIN="$HOME/.cache/compiler-labs/bin/tectonic" \
-TECTONIC_CACHE_DIR="$HOME/.cache/compiler-labs/tectonic-cache" \
+TECTONIC_BIN=/home/lenovo/.cache/compiler-labs/bin/tectonic \
+TECTONIC_CACHE_DIR=/tmp/compiler-labs-tectonic-cache-review \
 bash scripts/10_build_report.sh 2>&1 | tee logs/10_report_build.log
 ```
 
-该用法不需要修改脚本：`scripts/10_build_report.sh` 本来就支持 `TECTONIC_BIN` 与 `TECTONIC_CACHE_DIR`。若两者都不设置，脚本沿用原逻辑——存在系统 Tectonic 时直接使用，否则下载校验固定版本到临时目录并在退出时清理。
+构建脚本将 PDF 写回 `report/report.pdf`，详细引擎输出记录在 `logs/10_latex_compile.log`。Tectonic 报告生成 16 页。当前日志有少量段落末行较短的 Underfull 提示，没有 Overfull、未定义引用或编译错误。
 
-## 生成产物
+## 生成产物与验收
 
-- `report/report.tex`：唯一正式报告源文件。
-- `report/report.pdf`：由上述 LaTeX 源文件编译。
-- `scripts/10_build_report.sh`：构建脚本。
-- `logs/10_report_build.log`：构建命令输出。
-- `logs/10_latex_compile.log`：引擎日志。
-- `records/10_report.md`、`records/FINAL_HANDOFF.md`、`records/artifact_index.md`。
+- `report/report.tex`：修订后的正式报告源文件。
+- `report/report.pdf`：Tectonic 生成的 16 页 PDF。
+- `logs/10_report_build.log`：构建命令和产物摘要。
+- `logs/10_latex_compile.log`：LaTeX 引擎日志。
 
-## 验收结果
+报告含 10 个表格和 4 张 TikZ 矢量图。最终 PDF SHA-256：
 
-PASS — Tectonic 编译成功，最终 LaTeX 日志无编译错误、无排版溢出（Overfull），仅剩少量 CJK 行内松散的 Underfull 提示，不影响版面。PDF 版本 1.5，共 21 页，含 13 个表、4 张矢量图。
+```text
+cf7584ddcd90db72f6ebcc919ea949274ad0ed711905a80243c336f9f96e5997
+```
 
-构建产物的 SHA-256 每次都会写入 `logs/10_report_build.log`。注意 Tectonic 会把生成时间写入 PDF，因此即使源文件不变，重新构建的哈希也会变化；稳定的验收指标是页数（21）与源文件 `report/report.tex`。正文中引用的每个数字都在 `records/` 与 `outputs/` 中可追溯。
+**验收：PASS。** PDF 已成功重编译；编译无错误、无溢出和未定义引用。数字和结论只在本实验实际覆盖的范围内使用，未据此声称性能提升或真实 NPU 执行结果。
