@@ -1,34 +1,24 @@
 Stage 10: compile report/report.tex to PDF with Tectonic
 Tectonic 0.16.9
 note: Running TeX ...
-warning: report.tex:88: Underfull \hbox (badness 5077) in paragraph at lines 87--88
-warning: report.tex:133: Underfull \hbox (badness 2990) in paragraph at lines 132--133
-warning: report.tex:529: Underfull \hbox (badness 4132) in paragraph at lines 528--529
-warning: report.tex:529: Underfull \hbox (badness 10000) in paragraph at lines 528--529
-warning: report.tex:553: Underfull \hbox (badness 10000) in paragraph at lines 552--553
-warning: report.tex:774: Underfull \hbox (badness 10000) in paragraph at lines 773--774
-warning: report.tex:774: Underfull \hbox (badness 10000) in paragraph at lines 773--774
-warning: report.tex:811: Underfull \hbox (badness 2781) in paragraph at lines 810--811
+warning: report.tex:121: Underfull \hbox (badness 6316) in paragraph at lines 120--121
+warning: report.tex:139: Underfull \hbox (badness 2990) in paragraph at lines 138--139
+warning: report.tex:668: Underfull \hbox (badness 5460) in paragraph at lines 667--668
 note: Rerunning TeX because "report.aux" changed ...
-warning: report.tex:88: Underfull \hbox (badness 5077) in paragraph at lines 87--88
-warning: report.tex:133: Underfull \hbox (badness 2990) in paragraph at lines 132--133
-warning: report.tex:529: Underfull \hbox (badness 4132) in paragraph at lines 528--529
-warning: report.tex:529: Underfull \hbox (badness 10000) in paragraph at lines 528--529
-warning: report.tex:553: Underfull \hbox (badness 10000) in paragraph at lines 552--553
-warning: report.tex:774: Underfull \hbox (badness 10000) in paragraph at lines 773--774
-warning: report.tex:774: Underfull \hbox (badness 10000) in paragraph at lines 773--774
-warning: report.tex:811: Underfull \hbox (badness 2781) in paragraph at lines 810--811
+warning: report.tex:121: Underfull \hbox (badness 6316) in paragraph at lines 120--121
+warning: report.tex:139: Underfull \hbox (badness 2990) in paragraph at lines 138--139
+warning: report.tex:668: Underfull \hbox (badness 5460) in paragraph at lines 667--668
 warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
 note: Running xdvipdfmx ...
-note: Writing `/tmp/compiler-labs-latex.sZzpW7/out/report.pdf` (445.0439453125 KiB)
-note: Writing `/tmp/compiler-labs-latex.sZzpW7/out/report.log` (34.4365234375 KiB)
+note: Writing `/tmp/compiler-labs-latex.MNK2Rn/out/report.log` (32.888671875 KiB)
+note: Writing `/tmp/compiler-labs-latex.MNK2Rn/out/report.pdf` (372.5791015625 KiB)
 note: Skipped writing 2 intermediate files (use --keep-intermediates to keep them)
 
 [PDF artifact]
 /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf: PDF document, version 1.5 (zip deflate encoded)
-d8ce0707ec34a6401eeea3c887fc7d39c66d118a6452d2ef40dd67a525f66b84  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
+cf7584ddcd90db72f6ebcc919ea949274ad0ed711905a80243c336f9f96e5997  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
 LaTeX source: report/report.tex
-Tectonic cache: /home/lenovo/.cache/compiler-labs/tectonic-cache
+Tectonic cache: /tmp/compiler-labs-tectonic-cache-review
 Build-owned temporary download, output, and default-cache files are removed on exit.
 
 Stage 10 report build: PASS
