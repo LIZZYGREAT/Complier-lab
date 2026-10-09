@@ -14,14 +14,14 @@
 | 7 O0/O2 优化对比 | PASS | `cafe4d4` |
 | 8 MLIR / Ascend VecAdd 与 PlanMemory | PASS（初期按 Stage 1B 做源码分析；后由 Stage 12/13 升级为实测） | `d25b04c` + `2c42438` |
 | 9 三路最终一致性验证 | PASS | `bfd4f20` |
-| 10 最终 PDF 报告 | PASS（2026-10-09 全篇修订并重编译，16 页） | `a3e2f79`、`c92b11a` |
+| 10 最终 PDF 报告 | PASS（按前半部分风格调整后文并重编译，15 页） | `a3e2f79`、`c92b11a`、`e354163` |
 | 11 Ascend 构建环境预检 | PASS | 本轮 |
 | 12 编译 bishengir-opt | PASS（三轮失败后成功） | 本轮 |
 | 13 实跑上游 Pass | PASS（3 个上游 RUN 全部通过 FileCheck） | 本轮 |
 
 ## 交付入口
 
-- 正式报告：`report/report.pdf`（16 页；SHA-256 见 `records/10_report.md` 与 `logs/10_report_build.log`）
+- 正式报告：`report/report.pdf`（15 页；SHA-256 见 `records/10_report.md` 与 `logs/10_report_build.log`）
 - LaTeX 源稿：`report/report.tex`（报告唯一正式源文件）
 - 实验结果矩阵：`outputs/final-validation.md`
 - 各阶段记录：`records/00_environment.md` 至 `records/13_ascend_pass_runs.md`
@@ -68,4 +68,4 @@
 
 ## 全篇修订（2026-10-09）
 
-按用户要求重新通读并修订整篇报告，以初学编译原理的学生视角撰写，压缩重复段落和过密细节，保留结论所需的产物、数据与边界说明；重新安排代码块和表格。报告现为 16 页，含 10 个表格和 4 张 TikZ 图。Tectonic 0.16.9 构建成功，没有编译错误、溢出或未定义引用，仅有少量 Underfull 行末提示。PDF SHA-256 为 `cf7584ddcd90db72f6ebcc919ea949274ad0ed711905a80243c336f9f96e5997`，完整过程见 `records/10_report.md` 和 `logs/10_report_build.log`。
+在用户调整前半部分文字后，后半部分按相同风格修改：采用简洁陈述句，不以“我”起句，并保留技术结论和实验边界。报告现为 15 页，含 10 个表格和 4 张 TikZ 图。Tectonic 0.16.9 构建成功，没有编译错误或排版警告。PDF SHA-256 为 `6e4f7236e78286a040ef7c32c2aa9474263743bd0e6b7ddb54e9a9eaf867a18a`，完整过程见 `records/10_report.md` 和 `logs/10_report_build.log`。

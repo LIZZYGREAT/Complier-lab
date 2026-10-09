@@ -37,8 +37,8 @@
 | `mlir/analysis/plan_memory_analysis.md` | Ascend 官方文档、Test Case 与本机输出 | PlanMemory 的 alloc 到 pointer_cast 实测变化 | 是 |
 | `mlir/references/source_index.md` | LLVM 与 Ascend 官方资料及固定源码提交 | 官方来源和本机验证版本索引 | 是 |
 | `mlir/logs/environment.log`, `build.log`, `pass_runs.log` | 环境检查、构建决策与本机执行 | 记录初次分析决策及后续构建、Pass 运行 | 按需引用 |
-| `report/report.tex` | Stage 10（2026-10-09 全篇修订） | LaTeX 正式报告源文件，含 TikZ 图表 | 是 |
-| `report/report.pdf` | Stage 10（2026-10-09 重编译） | Tectonic 编译的 16 页最终报告 | 是 |
+| `report/report.tex` | Stage 10（按用户修改的文风统一后文） | LaTeX 正式报告源文件，含 TikZ 图表 | 是 |
+| `report/report.pdf` | Stage 10（2026-10-09 重编译） | Tectonic 编译的 15 页最终报告 | 是 |
 | `scripts/10_build_report.sh` | Stage 10 | 使用隔离的临时引擎/缓存构建 PDF | 是 |
 | `logs/10_latex_compile.log` | Stage 10 | Tectonic/LaTeX 编译日志 | 按需引用 |
 | `scripts/patches/ascendnpu-ir-hivmc-link-order.patch` | 本实验 | 上游静态库循环的链接补丁 | 是 |

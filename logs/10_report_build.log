@@ -1,22 +1,15 @@
 Stage 10: compile report/report.tex to PDF with Tectonic
 Tectonic 0.16.9
 note: Running TeX ...
-warning: report.tex:121: Underfull \hbox (badness 6316) in paragraph at lines 120--121
-warning: report.tex:139: Underfull \hbox (badness 2990) in paragraph at lines 138--139
-warning: report.tex:668: Underfull \hbox (badness 5460) in paragraph at lines 667--668
-note: Rerunning TeX because "report.aux" changed ...
-warning: report.tex:121: Underfull \hbox (badness 6316) in paragraph at lines 120--121
-warning: report.tex:139: Underfull \hbox (badness 2990) in paragraph at lines 138--139
-warning: report.tex:668: Underfull \hbox (badness 5460) in paragraph at lines 667--668
-warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
+note: Rerunning TeX because "report.out" changed ...
 note: Running xdvipdfmx ...
-note: Writing `/tmp/compiler-labs-latex.MNK2Rn/out/report.log` (32.888671875 KiB)
-note: Writing `/tmp/compiler-labs-latex.MNK2Rn/out/report.pdf` (372.5791015625 KiB)
+note: Writing `/tmp/compiler-labs-latex.Ivn8Nw/out/report.log` (31.9638671875 KiB)
+note: Writing `/tmp/compiler-labs-latex.Ivn8Nw/out/report.pdf` (361.2587890625 KiB)
 note: Skipped writing 2 intermediate files (use --keep-intermediates to keep them)
 
 [PDF artifact]
 /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf: PDF document, version 1.5 (zip deflate encoded)
-cf7584ddcd90db72f6ebcc919ea949274ad0ed711905a80243c336f9f96e5997  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
+6e4f7236e78286a040ef7c32c2aa9474263743bd0e6b7ddb54e9a9eaf867a18a  /home/lenovo/projects/Compiler-Labs/lab/report/report.pdf
 LaTeX source: report/report.tex
 Tectonic cache: /tmp/compiler-labs-tectonic-cache-review
 Build-owned temporary download, output, and default-cache files are removed on exit.
