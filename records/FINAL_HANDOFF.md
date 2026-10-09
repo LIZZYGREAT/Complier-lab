@@ -14,14 +14,14 @@
 | 7 O0/O2 优化对比 | PASS | `cafe4d4` |
 | 8 MLIR / Ascend VecAdd 与 PlanMemory | PASS（初期按 Stage 1B 做源码分析；后由 Stage 12/13 升级为实测） | `d25b04c` + `2c42438` |
 | 9 三路最终一致性验证 | PASS | `bfd4f20` |
-| 10 最终 PDF 报告 | PASS（深度修订并纳入 Ascend 实测后重编译，21 页） | `a3e2f79`、本轮修订 |
+| 10 最终 PDF 报告 | PASS（2026-10-09 全篇修订并重编译，16 页） | `a3e2f79`、`c92b11a` |
 | 11 Ascend 构建环境预检 | PASS | 本轮 |
 | 12 编译 bishengir-opt | PASS（三轮失败后成功） | 本轮 |
 | 13 实跑上游 Pass | PASS（3 个上游 RUN 全部通过 FileCheck） | 本轮 |
 
 ## 交付入口
 
-- 正式报告：`report/report.pdf`（21 页；哈希随构建时间变化，见 `logs/10_report_build.log`）
+- 正式报告：`report/report.pdf`（16 页；SHA-256 见 `records/10_report.md` 与 `logs/10_report_build.log`）
 - LaTeX 源稿：`report/report.tex`（报告唯一正式源文件）
 - 实验结果矩阵：`outputs/final-validation.md`
 - 各阶段记录：`records/00_environment.md` 至 `records/13_ascend_pass_runs.md`
@@ -31,9 +31,9 @@
 - 报告构建日志：`logs/10_report_build.log`
 - LaTeX 引擎日志：`logs/10_latex_compile.log`
 
-## 本轮修订（2026-10-08）
+## 前一版修订记录（2026-10-08）
 
-报告从 7 页扩写到 18 页（随后因纳入 Ascend 实测再增至 21 页），主要补充真实过程证据而非教材内容：编译器内部阶段与产物对应表、`.i` 行标记与 `readelf` 文件头/节区/符号/重定位证据、手写 `manual.ll` 与 `manual.s` 完整清单、自动生成与手写 IR 的组织方式对比、`calc` 的 32 字节栈帧图、Clang 参考汇编与手写汇编在取模实现与 `main` 帧大小上的差异、`-O2` 下奇偶判断退化为变长左移的分析、MLIR 部分的证据边界声明，以及各阶段复现入口。报告内的每个数字都与仓库产物核对过。
+当时报告从 7 页扩写至 18 页，随后纳入 Ascend 实测并增至 21 页。补充内容包括编译阶段、ELF 证据、手写实现、ABI、优化观察、MLIR 证据边界与复现入口。2026-10-09 的全篇修订将叙述和排版重新收敛；旧版页数及内容组织不再代表当前 PDF。
 
 同时新建了此前缺失的 `records/errors_and_fixes.md`，并把课程文档目录 `docs/` 纳入版本管理。`report/figures/` 保持为空目录：所有图均为内联 TikZ 矢量图，不依赖位图素材。
 
@@ -49,7 +49,7 @@
 
 ## 全局范围说明
 
-`../SysY_Compiler_2025` 已有的编译器、运行库及其本地修改均未重建或更改；实验复用其中既有 RISC-V runtime。报告初期如实标注 Ascend 阶段只做官方资料与上游源码分析；后由 Stage 12/13 补上真实运行证据，第 8 节已改为以实测为准。始终没有安装 CANN、配置驱动或上板。本轮在 `lab1` 分两笔提交 Stage 8 分析和 Stage 10 报告，随后单独更新本交接记录；提交仅保存在本地，没有推送远端。此前 LaTeX 引擎和宏包缓存仅用于临时构建，已清理；按用户要求，PDF 页面检查工具保留在 `/tmp/compiler-labs-pdf-check`。
+`../SysY_Compiler_2025` 已有的编译器、运行库及其本地修改均未重建或更改；实验复用其中既有 RISC-V runtime。报告初期如实标注 Ascend 阶段只做官方资料与上游源码分析；后由 Stage 12/13 补上真实运行证据，第 8 节已改为以实测为准。始终没有安装 CANN、配置驱动或上板。本轮在 `lab1` 分段提交并仅保存在本地，没有推送远端。前一版构建后清理过临时 LaTeX 资源；本次全篇修订构建使用的宏包缓存副本位于 `/tmp/compiler-labs-tectonic-cache-review`。
 
 ## Stage 12–13：真正跑通 Ascend
 
@@ -64,4 +64,8 @@
 
 边界不变：没有安装 CANN、没有驱动、没有生成或运行 kernel `.o`、没有上板——这些经确认不是观察 MLIR 中端 lowering 的必需项。lowering 主线中 Arith/Tensor 与 HFusion 两层仍属官方资料整理的概念说明，实物只到 HIVM 层。
 
-报告因此从 18 页扩到 21 页（13 表 4 图），第 8 节改为以实测结果为准。
+当时报告从 18 页扩到 21 页（13 表 4 图），第 8 节改为以实测结果为准。当前页数和表图数量见下节。
+
+## 全篇修订（2026-10-09）
+
+按用户要求重新通读并修订整篇报告，以初学编译原理的学生视角撰写，压缩重复段落和过密细节，保留结论所需的产物、数据与边界说明；重新安排代码块和表格。报告现为 16 页，含 10 个表格和 4 张 TikZ 图。Tectonic 0.16.9 构建成功，没有编译错误、溢出或未定义引用，仅有少量 Underfull 行末提示。PDF SHA-256 为 `cf7584ddcd90db72f6ebcc919ea949274ad0ed711905a80243c336f9f96e5997`，完整过程见 `records/10_report.md` 和 `logs/10_report_build.log`。
