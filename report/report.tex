@@ -1,4 +1,3 @@
-% !TeX program = tectonic
 \documentclass[UTF8,a4paper,11pt]{ctexart}
 
 \usepackage[left=2.45cm,right=2.45cm,top=2.35cm,bottom=2.35cm,headheight=15pt]{geometry}
@@ -20,7 +19,7 @@
   citecolor=blue!45!black,
   urlcolor=blue!55!black,
   pdftitle={基于 Clang/LLVM 的语言处理流程、SysY 手写实现与 AscendNPU IR 实验},
-  pdfauthor={LIZZYGREAT},
+  pdfauthor={甘文杰 2412700},
   pdfsubject={编译原理实验报告}
 }
 \urlstyle{same}
@@ -66,32 +65,32 @@
   belowskip=0.7em
 }
 
-\title{\heiti 基于 Clang/LLVM 的语言处理流程、SysY 手写实现与 AscendNPU IR 实验}
-\author{作者：LIZZYGREAT}
-\date{2026 年 10 月 9 日}
+\title{\heiti 基于 Clang/LLVM 的语言处理流程、SysY 实现与 AscendNPU IR 实验}
+\author{甘文杰 2412700}
+\date{2026 年 10 月 7 日}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-我用一段包含函数、循环、分支和输入输出的 SysY 程序观察 Clang/LLVM 的处理过程，再独立编写 LLVM IR 与 RV64 汇编，并用六组输入核对运行结果。实验中，我对照了预处理文本、LLVM IR、汇编和 ELF 目标文件，也查看了链接后程序如何解析运行库函数。优化部分记录了本例在 x86-64 与 RV64 目标上的不同变化。进阶部分则从源码构建 AscendNPU-IR 的 \code{bishengir-opt}，按上游测试命令运行 PlanMemory 和 InjectSync，并用上游 FileCheck 断言验证输出。两组 Before/After 均已保存；本次没有安装 CANN，也没有在真实 NPU 上运行程序。通过这些步骤，我重点学习了不同阶段怎样表示同一段程序，以及哪些结论能由实际产物支持。
+本实验以一段包含函数、循环、分支和输入输出的 SysY 程序观察 Clang/LLVM 的处理过程，并独立编写 LLVM IR 与 RV64 汇编，用六组输入核对运行结果。实验中检查了预处理文本、LLVM IR、汇编和 ELF 目标文件，也观察了链接后程序如何解析运行库函数。优化部分记录本例在 x86-64 与 RV64 目标上的不同变化。进阶部分从源码构建 AscendNPU-IR 的 \code{bishengir-opt}，按上游测试命令运行 PlanMemory 和 InjectSync，并用上游 FileCheck 断言验证输出。两组 Before/After 均已保存。
 
 \noindent\textbf{关键词：} 编译器；Clang；LLVM IR；RISC-V；ABI；MLIR；lowering
 \end{abstract}
 
 \section{引言}
 
-刚开始学习编译原理时，预处理、编译、汇编和链接很容易被当成一个连续的“编译”过程。本次作业让我有机会把中间产物分别保存下来，再检查每一步具体做了什么。LLVM IR 让我能追踪源程序中的变量和控制流；RISC-V 汇编则让我观察参数、返回值和局部变量如何使用寄存器与栈帧。
+本次作业需要将中间产物分别保存下来，再检查每一步具体做了什么。LLVM IR 可用于追踪源程序中的变量和控制流；RISC-V 汇编则展示参数、返回值和局部变量如何使用寄存器与栈帧。
 
-我选择一个短小的求和程序贯穿各阶段：计数器 $i$ 从 1 增加到输入 $n$，偶数项按 $2i$ 累加，奇数项按 $i$ 累加。它包含局部变量、算术、比较、条件分支、循环、函数调用和运行库输入输出，足以观察作业要求中的主要结构。后续实现使用同一组输入，避免因更换程序而失去对照。
+将求和程序作为示例：计数器 $i$ 从 1 增加到输入 $n$，偶数项按 $2i$ 累加，奇数项按 $i$ 累加。程序包含局部变量、算术、比较、条件分支、循环、函数调用和运行库输入输出，覆盖作业要求观察的主要结构。后续实现使用同一组输入。
 
-我先观察 Clang 生成的中间文件和目标文件，再对照 LLVM IR 的基本块结构，完成手写 IR 与汇编，最后比较优化结果并记录 AscendNPU IR 的 Pass 实验。正文只保留理解这些结果所需的代码和数据；完整输入、命令与日志放在仓库对应目录中。
+先观察 Clang 生成的中间文件和目标文件，再对照 LLVM IR 的基本块结构，完成手写 IR 与汇编，最后比较优化结果并记录 AscendNPU IR 的 Pass 实验。正文只保留理解这些结果所需的代码和数据；完整输入、命令与日志放在仓库对应目录中。
 
 \section{实验对象与工具环境}
 
-\subsection{贯穿程序}
+\subsection{示例程序}
 
-本次作业使用同一个程序。SysY 源文件 \code{source/example.sy} 如下。
+本次实验使用同一个程序。SysY 源文件 \code{source/example.sy} 如下。
 
 \begin{lstlisting}
 int calc(int n) {
@@ -113,11 +112,9 @@ int main() {
 }
 \end{lstlisting}
 
-程序从 $i=1$ 开始循环，直到 $i>n$ 后返回累加值。为让 Clang 直接处理，\code{source/example_clang.c} 保留相同算法，只补充 \code{getint}/\code{putint} 的函数声明；宿主机版本由 \code{source/host_runtime.c} 用标准输入输出实现这两个函数。固定输入为 $1,2,3,4,5,10$，预期结果分别为 $1,5,8,16,21,85$。这组结果由程序语义先行确定，再用于比较三个实现。
+程序从 $i=1$ 开始循环，直到 $i>n$ 后返回累加值。为让 Clang 直接处理，\code{source/example_clang.c} 保留相同算法，只补充 \code{getint}/\code{putint} 的函数声明。固定输入为 $1,2,3,4,5,10$，预期结果分别为 $1,5,8,16,21,85$。这组结果由程序语义确定，再用于比较三个实现。
 
 \subsection{工具环境}
-
-实验环境为 WSL2 上的 Ubuntu 22.04.5。工具版本和可执行文件路径记录在 \code{logs/00_environment.log}，正文只列出与主要实验步骤直接相关的工具。
 
 \begin{table}[H]
   \centering\small
@@ -126,16 +123,13 @@ int main() {
     \toprule
     工具 & 版本 & 本实验用途 \\
     \midrule
-    Clang / LLVM & 14.0.0 & 预处理、LLVM IR、x86-64 汇编、目标文件；接受手写 \code{.ll} \\
+    Clang / LLVM & 14.0.0 & 预处理、LLVM IR、x86-64 汇编、目标文件 \\
     GCC / GNU ld & 11.4.0 / 系统 GNU ld & 系统编译与链接工具 \\
     RISC-V unknown-elf GCC & 15.1.0 & 汇编、链接手写 RV64 汇编与课程 runtime \\
     QEMU & 7.0.0 & 用户态运行 RISC-V 可执行文件 \\
-    Tectonic & 0.16.9 & 编译本报告 LaTeX 源文件 \\
     \bottomrule
   \end{tabularx}
 \end{table}
-
-课程目录 \code{SysY_Compiler_2025} 中已有编译器和 SysY runtime。我只复用其中的 \code{lib/libsysy_riscv.a}，没有重新构建或修改该目录。Clang 参考汇编与手写程序都使用 \code{rv64gc/lp64d}，与 runtime 的 ELF 架构标志一致；具体调用和链接命令保存在阶段日志中。
 
 \section{Clang 语言处理流程}
 
@@ -165,7 +159,7 @@ int main() {
 
 \subsection{预处理}
 
-我运行 \code{clang -E source/example_clang.c -o generated/example.i} 生成预处理结果。预处理器展开宏、插入头文件、处理条件编译，并在输出中保留源位置标记；它还没有检查程序的类型或控制流。本例没有宏和头文件，\code{generated/example.i} 的程序语句与输入相同，文件中多出 Clang 写入的行标记。
+首先运行 \code{clang -E source/example_clang.c -o generated/example.i} 生成预处理结果。预处理器展开宏、插入头文件、处理条件编译，并在输出中保留源位置标记；未检查程序的类型或控制流。本例没有宏和头文件，\code{generated/example.i} 的程序语句与输入相同，文件中多出 Clang 写入的行标记。
 
 \begin{lstlisting}
 # 1 "source/example_clang.c"
@@ -181,11 +175,11 @@ int calc(int n) {
     ...
 \end{lstlisting}
 
-行标记记录源文件与行号，供后续工具定位代码来源；\code{<built-in>} 表示编译器提供的内建内容。这个例子让我看到，预处理并不一定会显著改变程序文本：没有宏或头文件时，它主要增加位置标记。
+行标记记录源文件与行号，供后续工具定位代码来源；\code{<built-in>} 表示编译器提供的内建内容。
 
 \subsection{编译器内部各阶段}
 
-\code{clang -cc1} 是真正的编译器前端。对同一份源文件，它依次完成以下工作；本实验通过在 \code{example.ll} 中看到的结果反推各阶段产物。
+对同一份源文件，\code{clang -cc1} 依次完成以下工作；本实验通过 \code{example.ll} 中的结果反推各阶段产物。
 
 \begin{table}[H]
   \centering\small
@@ -204,11 +198,11 @@ int calc(int n) {
   \end{tabularx}
 \end{table}
 
-词法、语法和语义分析通常归入前端；中端处理 IR，后端再面向目标架构。表中的观察来自这一个程序和 Clang 生成的文件，不是对 Clang 内部每个步骤的直接跟踪。
+词法、语法和语义分析通常归入前端；中端处理 IR，后端再面向目标架构。表中的观察来自这一个程序和 Clang 生成的文件。
 
 \subsection{LLVM IR 生成}
 
-我用以下命令输出 LLVM IR：
+以下命令输出 LLVM IR：
 \begin{lstlisting}
 clang -S -emit-llvm -O0 source/example_clang.c -o generated/example.ll
 \end{lstlisting}
@@ -244,13 +238,13 @@ Entry point address:       0x0
 Start of program headers:  0 (bytes into file)
 \end{lstlisting}
 
-\code{Type} 为 \code{REL}，且该文件没有可执行文件所需的入口布局，因此不能直接作为进程运行。符号表中，\code{calc}/\code{main} 是本文件定义的函数，\code{getint}/\code{putint} 则仍需由其他目标文件提供。重定位项记录了调用位置需要链接器补上的地址信息；其中既有运行库函数，也有对 \code{calc} 的调用。检查这些内容后，我能区分“汇编已经编码”与“程序已经可以运行”这两个状态。
+\code{Type} 为 \code{REL}，且该文件没有可执行文件所需的入口布局，因此不能直接作为进程运行。符号表中，\code{calc}/\code{main} 是本文件定义的函数，\code{getint}/\code{putint} 则仍需由其他目标文件提供。重定位项记录了调用位置需要链接器补上的地址信息；其中既有运行库函数，也有对 \code{calc} 的调用。由此可以区分“汇编已经编码”和“程序已经可以运行”这两个状态。
 
 \subsection{链接}
 
 本实验先分别生成 \code{example.o} 与 \code{host_runtime.o}，再用 Clang 驱动显式链接。日志显示驱动调用系统链接器，并加入启动文件和 C 库。链接器把 \code{example.o} 中对 \code{getint}/\code{putint} 的引用与 runtime 中的定义对应起来，再处理重定位并生成可执行文件 \code{generated/reference_linked}。它的六组输出与基准一致。单独的 \code{example.o} 仍是可重定位文件，也保留未定义的外部符号，因此不能独立运行。
 
-从这些文件可以看到，前处理结果仍是源文本，\code{.ll} 显示控制流和运算，\code{.s} 面向具体处理器，而 \code{.o} 已将指令编码并记录尚待链接器处理的引用。保存每一步的产物后，我能把这些阶段的职责和本程序对应起来。
+从这些文件可以看到，预处理结果仍是源文本，\code{.ll} 显示控制流和运算，\code{.s} 面向具体处理器，而 \code{.o} 已将指令编码并记录尚待链接器处理的引用。各阶段产物与相应职责由此对应起来。
 
 \section{LLVM IR 控制流与手写实现}
 
@@ -280,7 +274,7 @@ Start of program headers:  0 (bytes into file)
   \caption{\code{calc} 的基本块与循环回边}
 \end{figure}
 
-Clang -O0 生成的 \code{calc} 使用数字标签表示基本块。入口初始化 \code{i} 和 \code{sum} 后，条件块比较 $i$ 与 $n$；循环体再判断奇偶并分到两个累加分支。分支合流后递增 \code{i} 并跳回条件块，形成循环回边。离开循环时，程序读取 \code{sum} 并返回。阅读 IR 后我发现，源语言的 \code{while} 和 \code{if} 并没有对应的专用指令；它们由基本块、比较和 \code{br} 组合出来。
+Clang -O0 生成的 \code{calc} 使用数字标签表示基本块。入口初始化 \code{i} 和 \code{sum} 后，条件块比较 $i$ 与 $n$；循环体再判断奇偶并分到两个累加分支。分支合流后递增 \code{i} 并跳回条件块，形成循环回边。离开循环时，程序读取 \code{sum} 并返回。由此可见，源语言的 \code{while} 和 \code{if} 没有对应的专用指令，而是由基本块、比较和 \code{br} 组合表示。
 
 \begin{table}[H]
   \centering\small
@@ -301,7 +295,7 @@ Clang -O0 生成的 \code{calc} 使用数字标签表示基本块。入口初始
 
 \subsection{手写 LLVM IR}
 
-我根据 CFG 独立编写 \code{llvm/manual.ll}，没有复制 Clang 的 IR。手写版使用 \code{while.cond} 等语义化块名；形参 \code{n} 直接作为 SSA 值使用，只有 \code{i} 和 \code{sum} 保存在栈槽中。下面只列出循环条件和回边，完整模块保存在 \code{llvm/manual.ll}。
+基于 CFG 独立编写了 \code{llvm/manual.ll}，没有复制 Clang 的 IR。手写版使用 \code{while.cond} 等语义化块名；形参 \code{n} 直接作为 SSA 值使用，只有 \code{i} 和 \code{sum} 保存在栈槽中。下面列出循环条件和回边，完整模块保存在 \code{llvm/manual.ll}。
 
 \begin{lstlisting}
 define i32 @calc(i32 %n) {
@@ -357,13 +351,13 @@ while.end:
   \end{tabularx}
 \end{table}
 
-两份 IR 的核心运算和控制流相同，但块名、元数据以及局部变量的存放方式不同（表~\ref{tab:ir-compare}）。我手写时先按源程序画出控制流，再逐个填写运算和跳转；这样比直接修改 Clang 输出更容易检查语义。
+两份 IR 的核心运算和控制流相同，但块名、元数据以及局部变量的存放方式不同（表~\ref{tab:ir-compare}）。手写过程先按源程序整理控制流，再逐个填写运算和跳转，便于检查语义。
 
 \section{RISC-V 汇编与 ABI}
 
 \subsection{参考汇编与调用约定}
 
-我用 Clang 14 交叉生成 RV64 参考汇编（\code{--target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d}），先观察后端输出，再与手写实现对照。\code{calc} 的序言和奇偶判断片段如下：
+使用 Clang 14 交叉生成 RV64 参考汇编（\code{--target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d}），并将后端输出与手写实现对照。\code{calc} 的序言和奇偶判断片段如下：
 
 \begin{lstlisting}
 calc:
@@ -507,7 +501,7 @@ calc:
 
 \section{优化观察：-O0 与 -O2}
 
-我用同一份 C 文件生成两种优化级别的 LLVM IR、x86-64 汇编和 RV64 汇编，再比较实际 diff。下面的观察只针对这个程序和这两种目标。
+以同一份 C 文件生成两种优化级别的 LLVM IR、x86-64 汇编和 RV64 汇编，再比较实际 diff。下面的观察只针对这个程序和这两种目标。
 
 \begin{table}[H]
   \centering\small
@@ -529,7 +523,7 @@ calc:
 
 \subsection{从内存槽到 SSA}
 
-在这份 \code{-O0} IR 中，局部变量通过栈槽和 \code{load}/\code{store} 访问；\code{-O2} 结果则把这些变量保存在 SSA 值中，并用 \code{phi} 传递循环迭代间的值。统计结果为 \code{alloca/load/store} 从 6/11/9 降到 0/0/0，\code{phi} 从 0 增至 32。对我来说，最明显的变化不是源代码语句消失，而是同一状态不再通过内存读写表达。
+在这份 \code{-O0} IR 中，局部变量通过栈槽和 \code{load}/\code{store} 访问；\code{-O2} 结果则把这些变量保存在 SSA 值中，并用 \code{phi} 传递循环迭代间的值。统计结果为 \code{alloca/load/store} 从 6/11/9 降到 0/0/0，\code{phi} 从 0 增至 32。主要变化是同一状态不再通过内存读写表达。
 
 \subsection{奇偶判断被改写成位运算}
 
@@ -565,7 +559,7 @@ x86-64 的结果中可以看到四个 \code{i32} 组成的向量运算、XMM 寄
 
 \section{MLIR 与 AscendNPU IR}
 
-前几节中，我看到 Clang 的 LLVM IR 已经显式表示变量读写和分支；但面向 NPU 时，还需要表达张量形状、存储位置、数据搬运和硬件流水线。MLIR 允许编译器用不同 Dialect 保留这些层次的信息，再逐步 lowering。较高层的张量与算子语义有利于融合和 tiling；HIVM 则能表达 GM、UB 以及对应的数据搬运和向量运算。图~\ref{fig:lowering} 是依据课程要求与官方资料整理的概念路线，并非本机完整运行得到的转换链。\cite{mlir-lang,mlir-rationale,ascend-framework}
+前文的 LLVM IR 已显式表示变量读写和分支；面向 NPU 时，还需要表达张量形状、存储位置、数据搬运和硬件流水线。MLIR 允许编译器用不同 Dialect 保留这些层次的信息，再逐步 lowering。较高层的张量与算子语义有利于融合和 tiling；HIVM 则能表达 GM、UB 以及对应的数据搬运和向量运算。图~\ref{fig:lowering} 是依据课程要求与官方资料整理的概念路线，并非本机完整运行得到的转换链。\cite{mlir-lang,mlir-rationale,ascend-framework}
 
 \begin{figure}[H]
   \centering
@@ -587,7 +581,7 @@ x86-64 的结果中可以看到四个 \code{i32} 组成的向量运算、XMM 寄
   \label{fig:lowering}
 \end{figure}
 
-这条概念路线中，高层表示主要描述“两个向量逐元素相加”；到了 HIVM，内存空间和搬运步骤已显式出现。官方 VecAdd 样例使用 16 个 \code{i16} 元素：A、B、C 位于 GM，输入通过 \code{hivm.hir.load} 搬入 UB，在 UB 上执行 \code{hivm.hir.vadd}，再由 \code{hivm.hir.store} 写回 GM。下列代码是对上游文件的结构摘录，省略了完整类型和入口属性；它不是我从 Arith/Tensor 实际 lowering 得到的输出。\cite{ascend-framework,ascend-vecadd}
+这条概念路线中，高层表示主要描述“两个向量逐元素相加”；到了 HIVM，内存空间和搬运步骤已显式出现。官方 VecAdd 样例使用 16 个 \code{i16} 元素：A、B、C 位于 GM，输入通过 \code{hivm.hir.load} 搬入 UB，在 UB 上执行 \code{hivm.hir.vadd}，再由 \code{hivm.hir.store} 写回 GM。下列代码是对上游文件的结构摘录，省略了完整类型和入口属性，并非从 Arith/Tensor 实际 lowering 得到的输出。\cite{ascend-framework,ascend-vecadd}
 
 \begin{lstlisting}
 func.func @add(%a: memref<16xi16, #hivm.address_space<gm>>,
@@ -608,7 +602,7 @@ func.func @add(%a: memref<16xi16, #hivm.address_space<gm>>,
 
 \subsection{实测一：PlanMemory 规划 UB 地址}
 
-PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上地址；在这个用例中，它把 \code{memref.alloc} 改写为带偏移的 \code{hivm.hir.pointer_cast}。我选用上游 \code{plan-memory.mlir} 中的 \code{test\_mem\_allocate\_basic}：其中四个 UB buffer 都是 $16\times16\times16$ 的 \code{f16} 张量，每个占 8192 字节。测试自带的默认策略命令为：
+PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上地址；在这个用例中，它把 \code{memref.alloc} 改写为带偏移的 \code{hivm.hir.pointer_cast}。实验采用上游 \code{plan-memory.mlir} 中的 \code{test\_mem\_allocate\_basic}：其中四个 UB buffer 都是 $16\times16\times16$ 的 \code{f16} 张量，每个占 8192 字节。测试自带的默认策略命令为：
 
 \begin{lstlisting}
 // RUN: bishengir-opt %s -hacc-append-device-spec=target=Ascend910B1 \
@@ -618,7 +612,7 @@ PlanMemory 根据临时 buffer 的生命周期和目标硬件约束安排片上�
 // CHECK: arith.constant 0 : i64
 // CHECK: hivm.hir.pointer_cast
 \end{lstlisting}
-\code{-hacc-append-device-spec} 先把 Ascend910B1 的目标规格写入模块，随后运行 PlanMemory。测试文件还包含一条使用 \code{largest-first} 策略的 \code{RUN}。我逐字执行这两条命令，并将结果交给上游 FileCheck 断言检查；两条均通过。
+\code{-hacc-append-device-spec} 先把 Ascend910B1 的目标规格写入模块，随后运行 PlanMemory。测试文件还包含一条使用 \code{largest-first} 策略的 \code{RUN}。两条命令均按上游定义执行，并交由 FileCheck 断言检查；结果均通过。
 
 对默认策略用例保存的 Before/After 显示：
 
@@ -653,27 +647,27 @@ hivm.hir.store ins(%0 : ...<ub>) outs(%arg1 : ...<gm>)
 hivm.hir.pipe_barrier[<PIPE_ALL>]
 \end{lstlisting}
 
-MTE2 与 MTE3 表示数据搬运流水，V 表示向量计算流水。Pass 在 load 后加入 MTE2 到 V 的 flag/wait，在 store 前加入 V 到 MTE3 的 flag/wait，并在函数末尾加入一条 \code{PIPE\_ALL} barrier。统计结果是 2 条 \code{set\_flag}、2 条 \code{wait\_flag} 和 1 条 \code{pipe\_barrier}；Before 文件中的真实指令数为 0。这个输出让我看到，IR 中的操作顺序与不同硬件流水线之间的完成依赖是两件事，Pass 会将需要等待的依赖显式写出来。Before/After 文件保存在 \code{mlir/outputs/}。\cite{ascend-sync-test,ascend-passes}
+MTE2 与 MTE3 表示数据搬运流水，V 表示向量计算流水。Pass 在 load 后加入 MTE2 到 V 的 flag/wait，在 store 前加入 V 到 MTE3 的 flag/wait，并在函数末尾加入一条 \code{PIPE\_ALL} barrier。统计结果是 2 条 \code{set\_flag}、2 条 \code{wait\_flag} 和 1 条 \code{pipe\_barrier}；Before 文件中的真实指令数为 0。这组结果说明，IR 中的操作顺序并不等同于不同硬件流水线之间的完成依赖；Pass 将需要等待的依赖显式写出。Before/After 文件保存在 \code{mlir/outputs/}。\cite{ascend-sync-test,ascend-passes}
 
 \subsection{构建与验证方式}
 
-我在用户级虚拟环境中安装了 CMake 4.4.4 和 Ninja 1.13.2，没有替换系统工具。AscendNPU-IR 与 LLVM 子项目分别固定在提交 \code{2ac1b376} 和 \code{06913395}；构建出的工具报告版本为：
+构建环境使用用户级虚拟环境中的 CMake 4.4.4 和 Ninja 1.13.2，没有替换系统工具。AscendNPU-IR 与 LLVM 子项目分别固定在提交 \code{2ac1b376} 和 \code{06913395}；构建出的工具报告版本为：
 
 \begin{lstlisting}
 bishengir-opt 2.0.0 (gitcode.com/Ascend/ascendnpu-ir 2ac1b376da1d)
 llvm 19.1.7 06913395ef8a   Release build
 \end{lstlisting}
 
-构建工具时遇到上游静态库之间的循环依赖。我在本地补丁中使用 CMake 的 \code{LINK\_GROUP:RESCAN} 让链接器重新扫描相关静态库；补丁只改变 \code{bishengir-opt} 的链接参数，没有修改 Pass 实现。详细构建过程和补丁见 \code{records/12\_ascend\_build.md} 与 \code{scripts/patches/}。随后三条上游 RUN 命令全部通过 FileCheck，包括 PlanMemory 的两种策略和 InjectSync。
+构建工具时遇到上游静态库之间的循环依赖。本地补丁使用 CMake 的 \code{LINK\_GROUP:RESCAN} 让链接器重新扫描相关静态库；补丁只改变 \code{bishengir-opt} 的链接参数，没有修改 Pass 实现。详细构建过程和补丁见 \code{records/12\_ascend\_build.md} 与 \code{scripts/patches/}。随后三条上游 RUN 命令全部通过 FileCheck，包括 PlanMemory 的两种策略和 InjectSync。
 
 \subsection{边界}
 
-这部分实验止于 IR Pass。Arith/Tensor 与 HFusion 是我根据资料整理的前置层次，本机实跑的输入从 HIVM 开始；我验证了 Pass 对 IR 的结构变换，但没有验证最终设备上的运行表现。本次没有安装 CANN、配置驱动、生成 kernel \code{.o} 或在 NPU 上运行。\cite{ascend-build,ascend-readme}
+这部分实验止于 IR Pass。Arith/Tensor 与 HFusion 是根据资料整理的前置层次，本机实跑的输入从 HIVM 开始；实测确认了 Pass 对 IR 的结构变换，但没有覆盖最终设备运行。本次没有安装 CANN、配置驱动、生成 kernel \code{.o} 或在 NPU 上运行。\cite{ascend-build,ascend-readme}
 
 \clearpage
 \section{实验可复现性}
 
-我把主要命令整理为 \code{scripts/} 下的脚本，并将输出和过程记录分别放在 \code{logs/} 与 \code{records/}。自动生成文件保存在 \code{generated/}，手写 LLVM IR 与汇编分别保存在 \code{llvm/} 和 \code{riscv/}，便于区分工具输出与人工实现。
+主要命令整理在 \code{scripts/} 下，输出和过程记录分别放在 \code{logs/} 与 \code{records/}。自动生成文件保存在 \code{generated/}，手写 LLVM IR 与汇编分别保存在 \code{llvm/} 和 \code{riscv/}，便于区分工具输出与人工实现。
 
 \begin{table}[H]
   \centering\small
@@ -702,15 +696,15 @@ llvm 19.1.7 06913395ef8a   Release build
 
 \section{结论}
 
-这次实验让我把源程序、LLVM IR、汇编、目标文件和可执行程序联系起来。检查 \code{example.o} 时，我看到它仍是 \code{ET\_REL} 文件，并保留对 \code{getint}/\code{putint} 的引用；显式链接之后，这些引用才由 runtime 提供定义。这个对照比单看命令更容易让我分清汇编器和链接器的职责。
+作为编译原理初学者，本次实验将源程序、LLVM IR、汇编、目标文件和可执行程序联系起来。检查 \code{example.o} 可见，它仍是 \code{ET\_REL} 文件，并保留对 \code{getint}/\code{putint} 的引用；显式链接之后，这些引用才由 runtime 提供定义。由此可以区分汇编器与链接器的职责。
 
-在 LLVM IR 中，我将循环条件、奇偶分支和回边对应到基本块与 \code{br} 指令，再独立写出手写 IR。RV64 实验则让我从另一个层面看到同一控制流：参数和返回值使用 \code{a0}，\code{calc} 通过栈帧保存需要跨指令保留的状态。手写版本与 Clang 输出在栈帧布局上接近，但对奇偶判断的指令选择不同。
+LLVM IR 中，循环条件、奇偶分支和回边由基本块与 \code{br} 指令表示，并据此完成了手写 IR。RV64 汇编展示了同一控制流在目标架构上的实现：参数和返回值使用 \code{a0}，\code{calc} 通过栈帧保存局部变量。手写版本与 Clang 输出的栈帧布局接近，但奇偶判断采用了不同指令。
 
-优化实验显示，\code{-O2} 不只是删掉指令：它先改变变量表示，再化简分支和算术；最终是否向量化还取决于目标架构。本例在 x86-64 上出现向量运算，在不含 RVV 的 RV64 目标上仍是标量循环。由于没有测量运行时间，我只能比较代码结构，不能据此判断实际快慢。
+优化实验显示，\code{-O2} 会改变变量表示，并化简分支和算术；最终是否向量化还取决于目标架构。本例在 x86-64 上出现向量运算，在不含 RVV 的 RV64 目标上仍是标量循环。由于没有测量运行时间，本实验只比较代码结构，不据此判断运行速度。
 
-AscendNPU IR 部分让我看到硬件限制如何进入较低层表示。PlanMemory 用例把四个临时分配转换为四个偏移为 0 的 \code{pointer\_cast}，计算操作保持不变；InjectSync 则在搬运与向量计算之间加入 flag/wait，并在函数末尾加入 barrier。三条上游 RUN 命令及其 FileCheck 断言都通过。Arith/Tensor 到 HFusion 的部分仍是资料整理，实测范围从 HIVM 开始；本次没有编译 kernel 或在 NPU 上运行。
+AscendNPU IR 实验展示了硬件约束如何进入较低层表示。PlanMemory 用例将四个临时分配转换为偏移为 0 的 \code{pointer\_cast}，计算操作保持不变；InjectSync 则在数据搬运与向量计算之间加入 flag/wait，并在函数末尾加入 barrier。三条上游 RUN 命令及其 FileCheck 断言均通过。Arith/Tensor 到 HFusion 的部分仍是资料整理，实测范围从 HIVM 开始；本次没有编译 kernel 或在 NPU 上运行。
 
-整体上，我完成了作业要求的处理流程观察、手写实现和固定用例验证，也从真实 Pass 输出中补上了一个小型的 Ascend IR 实验。还有不少编译器实现细节没有涉及；对这次作业而言，我目前能用保存的产物解释的是各阶段表示的变化及其边界。
+整体上，本次实验完成了处理流程观察、手写实现和固定用例验证，并通过真实 Pass 输出补充了 Ascend IR 实验。编译器仍有许多实现细节未涉及；当前保存的产物能够说明各阶段表示发生的变化，也限定了结论适用的范围。
 
 \begin{thebibliography}{99}
 \footnotesize
