@@ -1,5 +1,12 @@
 # 最终交付记录
 
+## 当前交付（2026-10-11）
+
+报告已按课件要求完成结构重组，并嵌入附录 A--E，使 PDF 可独立阅读和核查。当前正式报告为 **45 页、11 表、4 图**，LaTeX 源稿直接包含附录代码与过程文本。完整结构对照见 records/14_report_restructure.md，构建与验收见 records/10_report.md。下文较早的页数、哈希和章节编号属于历史记录。
+
+当前 PDF SHA-256：`2f4d654cce4224122c6e47ace435963f8b5466e0ca89bdbe6bfec1ada9b6ee8f`。
+
+
 ## 阶段状态
 
 | 阶段 | 状态 | 提交 |
@@ -14,14 +21,14 @@
 | 7 O0/O2 优化对比 | PASS | `cafe4d4` |
 | 8 MLIR / Ascend VecAdd 与 PlanMemory | PASS（初期按 Stage 1B 做源码分析；后由 Stage 12/13 升级为实测） | `d25b04c` + `2c42438` |
 | 9 三路最终一致性验证 | PASS | `bfd4f20` |
-| 10 最终 PDF 报告 | PASS（新增共同作者与分工，并重编译，16 页） | `a3e2f79`、`c92b11a`、`e354163`、本轮 |
+| 10 最终 PDF 报告 | PASS（结构重组、独立附录与 WSL 重编译，45 页） | `a3e2f79`、`c92b11a`、`e354163`、本轮 |
 | 11 Ascend 构建环境预检 | PASS | 本轮 |
 | 12 编译 bishengir-opt | PASS（三轮失败后成功） | 本轮 |
 | 13 实跑上游 Pass | PASS（3 个上游 RUN 全部通过 FileCheck） | 本轮 |
 
 ## 交付入口
 
-- 正式报告：`report/report.pdf`（16 页；SHA-256 见 `records/10_report.md` 与 `logs/10_report_build.log`）
+- 正式报告：`report/report.pdf`（45 页；SHA-256 见 `records/10_report.md` 与 `logs/10_report_build.log`）
 - LaTeX 源稿：`report/report.tex`（报告唯一正式源文件）
 - 实验结果矩阵：`outputs/final-validation.md`
 - 各阶段记录：`records/00_environment.md` 至 `records/13_ascend_pass_runs.md`
