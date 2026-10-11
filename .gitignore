@@ -27,6 +27,7 @@ __pycache__/
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.xdv
 
 # Experiment logs are required evidence and must remain versioned.
 !logs/*.log
